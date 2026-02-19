@@ -1,0 +1,19 @@
+# Visual Studio / IDE
+.vs/
+*.user
+*.suo
+*.cache
+*.log
+.idea/
+*.iml
+
+# Build output
+bin/
+obj/
+*.dll
+*.exe
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.iniy
