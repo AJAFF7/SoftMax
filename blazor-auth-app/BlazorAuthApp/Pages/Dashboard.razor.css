@@ -1,0 +1,51 @@
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 2rem;
+    background: rgb(255, 255, 255);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.dashboard-title h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+}
+
+.dashboard-title p {
+    color: #666;
+    margin: 0.5rem 0 0 0;
+    font-size: 1rem;
+}
+
+.dashboard-content {
+    width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .dashboard-title h1 {
+        font-size: 1.5rem;
+    }
+}

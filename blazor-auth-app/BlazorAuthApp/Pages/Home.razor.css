@@ -1,0 +1,331 @@
+.home-page {
+    width: 100%;
+    /* background: #696969; */
+}
+
+/* Hero Section */
+.hero-section {
+    max-height: 600px;
+    min-width: 2000px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 4rem;
+    padding: 4rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #a7a7a7 0%, #606060 100%);
+    color: rgb(47, 37, 37);
+    border-radius: 0.9rem;
+    margin-top: 5rem;
+    margin-left: -20.5rem;
+}
+
+.hero-content {
+    padding: 2rem;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+    line-height: 1.6;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-hero-primary,
+.btn-hero-secondary {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 14rem;
+}
+
+.btn-hero-primary {
+    background: white;
+    color: #667eea;
+}
+
+.btn-hero-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.btn-hero-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgb(139, 71, 71);
+    border: 2px solid rgb(255, 255, 255);
+}
+
+.btn-hero-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.hero-image {
+    position: relative;
+    height: 400px;
+}
+
+.floating-card {
+    position: absolute;
+    
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: float 3s ease-in-out infinite;
+    
+}
+
+.card-1 {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+    background: rgb(236, 102, 19);
+}
+
+.card-2 {
+    top: 50%;
+    right: 10%;
+    animation-delay: 1s;
+    background: rgb(102, 4, 182);
+}
+
+.card-3 {
+    bottom: 20%;
+    left: 30%;
+    animation-delay: 2s;
+    background: rgb(0, 177, 174);
+}
+
+.card-icon {
+    font-size: 2rem;
+}
+
+.card-text {
+    color: #000000;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* Features Section */
+.features-section {
+    
+    min-width: 2000px;
+    margin-left: -20.5rem;
+    margin-bottom: 40px;
+    /* margin: 6rem auto; */
+    padding: 0 2rem;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #707070;
+    margin-bottom: 2rem;
+    margin-top: 2rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.feature-card {
+    background: linear-gradient(135deg, #a7a7a7 0%, #606060 100%);
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1b1e;
+    margin-bottom: 1rem;
+}
+
+.feature-card p {
+    color: #ffffff;
+    line-height: 1.6;
+}
+
+/* Specializations Section */
+.specializations-section {
+    min-width: 2000px;
+    margin-left: -20.5rem;
+    /* margin: 6rem auto; */
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #748b9a 0%, #edf2f7 100%);
+    border-radius: 0.9rem;
+}
+
+.specializations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.specialization-card {
+    background: rgb(152, 165, 171);
+    padding: 2rem 1rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.specialization-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.spec-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.specialization-card h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+/* CTA Section */
+.cta-section {
+    margin-left: -20.5rem;
+    min-width: 2000px;
+    /* margin: 6rem auto 4rem; */
+    padding: 0 2rem;
+    margin-top: 40px;
+}
+
+.cta-content {
+    background: linear-gradient(135deg, #748b9a 0%, #edf2f7 100%);
+    padding: 4rem 2rem;
+    border-radius: 2rem;
+    text-align: center;
+    color: white;
+}
+
+.cta-content h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.cta-content p {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0.95;
+}
+
+.btn-cta {
+    padding: 1.125rem 3rem;
+    background: linear-gradient(135deg, #748b9a 0%, #edf2f7 100%);
+    color: #4F46E5;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+}
+
+.btn-cta:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-section {
+        grid-template-columns: 1fr;
+        padding: 3rem 1.5rem;
+        min-height: auto;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.125rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .btn-hero-primary,
+    .btn-hero-secondary {
+        width: 100%;
+    }
+
+    .hero-image {
+        display: none;
+    }
+
+    .section-title {
+        font-size: 2rem;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .specializations-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cta-content h2 {
+        font-size: 2rem;
+    }
+
+    .cta-content p {
+        font-size: 1.125rem;
+    }
+}

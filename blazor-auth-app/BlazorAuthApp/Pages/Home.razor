@@ -1,0 +1,144 @@
+@page "/"
+@using BlazorAuthApp.Services
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+<PageTitle>HealthCare+ | Your Trusted Medical Partner</PageTitle>
+
+<div class="home-page">
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Your Health, Our Priority</h1>
+            <p class="hero-subtitle">Book appointments with top-rated doctors in just a few clicks</p>
+            <div class="hero-actions">
+                @if (AuthService.IsAuthenticated())
+                {
+                    <button class="btn-hero-primary" @onclick="GoToDoctors">
+                        Find a Doctor
+                    </button>
+                    <button class="btn-hero-secondary" @onclick="GoToMyAppointments">
+                        My Appointments
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-hero-primary" @onclick="GoToRegister">
+                        Get Started
+                    </button>
+                    <button class="btn-hero-secondary" @onclick="GoToLogin">
+                        Login
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="hero-image">
+            <div class="floating-card card-1">
+                <div class="card-icon">⚕️</div>
+                <div class="card-text">Expert Doctors</div>
+            </div>
+            <div class="floating-card card-2">
+                <div class="card-icon">📅</div>
+                <div class="card-text">Easy Booking</div>
+            </div>
+            <div class="floating-card card-3">
+                <div class="card-icon">💊</div>
+                <div class="card-text">Quality Care</div>
+            </div>
+
+             
+        </div>
+    </section>
+
+    <section class="features-section">
+        <h2 class="section-title">Why Choose HealthCare+?</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🏥</div>
+                <h3>Top Specialists</h3>
+                <p>Access to highly qualified doctors across all specializations</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Quick Appointments</h3>
+                <p>Book your appointment in seconds with our simple booking system</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔐</div>
+                <h3>Secure & Private</h3>
+                <p>Your medical information is encrypted and kept confidential</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3>24/7 Access</h3>
+                <p>Manage your appointments anytime, anywhere from any device</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="specializations-section">
+        <h2 class="section-title">Our Specializations</h2>
+        <div class="specializations-grid">
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Cardiology</h4>
+            </div>
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Pediatrics</h4>
+            </div>
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Dermatology</h4>
+            </div>
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Orthopedics</h4>
+            </div>
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Neurology</h4>
+            </div>
+            <div class="specialization-card">
+                <div class="spec-icon"></div>
+                <h4>Ophthalmology</h4>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>Ready to Get Started?</h2>
+            <p>Join thousands of patients who trust HealthCare+ for their medical needs</p>
+            <button class="btn-cta" @onclick="HandleCtaClick">
+                @(AuthService.IsAuthenticated() ? "Browse Doctors" : "Create Account")
+            </button>
+        </div>
+    </section>
+</div>
+
+@code {
+    private void GoToDoctors()
+    {
+        Navigation.NavigateTo("/doctors");
+    }
+
+    private void GoToMyAppointments()
+    {
+        Navigation.NavigateTo("/my-appointments");
+    }
+
+    private void GoToRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+    private void HandleCtaClick()
+    {
+        Navigation.NavigateTo(AuthService.IsAuthenticated() ? "/doctors" : "/register");
+    }
+}

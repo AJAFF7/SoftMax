@@ -1,0 +1,146 @@
+@page "/doctors"
+@using BlazorAuthApp.Models
+@using BlazorAuthApp.Services
+@inject DoctorService DoctorService
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+<PageTitle>Find a Doctor</PageTitle>
+
+<div class="doctors-page">
+    <div class="page-header">
+        <h1 class="page-title">Find Your Doctor</h1>
+        <p class="page-subtitle">Choose from our experienced healthcare professionals</p>
+    </div>
+
+    <div class="filters-section">
+        <div class="filter-group">
+            <label>Filter by Specialization:</label>
+            <select class="filter-select" @bind="selectedSpecialization" @bind:after="FilterDoctors">
+                <option value="">All Specializations</option>
+                @foreach (var spec in specializations)
+                {
+                    <option value="@spec">@spec</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading doctors...</p>
+        </div>
+    }
+    else if (!filteredDoctors.Any())
+    {
+        <div class="no-results">
+            <p>No doctors found matching your criteria.</p>
+        </div>
+    }
+    else
+    {
+        <div class="doctors-grid">
+            @foreach (var doctor in filteredDoctors)
+            {
+                <div class="doctor-card">
+                    <div class="doctor-image">
+                        <img src="@doctor.ImageUrl" alt="@doctor.FullName" />
+                        <div class="doctor-status @(doctor.IsAvailable ? "available" : "unavailable")">
+                            @(doctor.IsAvailable ? "Available" : "Unavailable")
+                        </div>
+                    </div>
+                    <div class="doctor-info">
+                        <h3 class="doctor-name">Dr. @doctor.FullName</h3>
+                        <p class="doctor-specialization">@doctor.Specialization</p>
+                        <div class="doctor-stats">
+                            <div class="stat-item">
+                                <span class="stat-icon">⭐</span>
+                                <span class="stat-value">@doctor.YearsOfExperience years exp.</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">💰</span>
+                                <span class="stat-value">$@doctor.ConsultationFee</span>
+                            </div>
+                        </div>
+                        <p class="doctor-description">@doctor.Description</p>
+                        <div class="doctor-contact">
+                            <div class="contact-item">
+                                <span class="contact-icon">📧</span>
+                                <span>@doctor.Email</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="contact-icon">📞</span>
+                                <span>@doctor.Phone</span>
+                            </div>
+                        </div>
+                        @if (AuthService.IsAuthenticated())
+                        {
+                            <button class="btn-book" @onclick="() => BookAppointment(doctor.Id)">
+                                Book Appointment
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn-book disabled" @onclick="GoToLogin">
+                                Login to Book
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Doctor> allDoctors = new();
+    private List<Doctor> filteredDoctors = new();
+    private List<string> specializations = new();
+    private string selectedSpecialization = string.Empty;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDoctors();
+        await LoadSpecializations();
+    }
+
+    private async Task LoadDoctors()
+    {
+        isLoading = true;
+        allDoctors = await DoctorService.GetDoctorsAsync();
+        filteredDoctors = allDoctors;
+        isLoading = false;
+    }
+
+    private async Task LoadSpecializations()
+    {
+        specializations = await DoctorService.GetSpecializationsAsync();
+    }
+
+    private async Task FilterDoctors()
+    {
+        isLoading = true;
+        if (string.IsNullOrEmpty(selectedSpecialization))
+        {
+            filteredDoctors = allDoctors;
+        }
+        else
+        {
+            filteredDoctors = await DoctorService.SearchDoctorsAsync(selectedSpecialization);
+        }
+        isLoading = false;
+    }
+
+    private void BookAppointment(int doctorId)
+    {
+        Navigation.NavigateTo($"/book-appointment/{doctorId}");
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

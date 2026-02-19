@@ -1,0 +1,102 @@
+﻿@using BlazorAuthApp.Services
+@using Microsoft.JSInterop
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
+
+<nav class="modern-navbar">
+    <div class="navbar-container">
+        <div class="navbar-brand">
+            <a href="/">
+                <span class="brand-icon">🏥</span>
+                <span class="brand-text">HealthCare+</span>
+            </a>
+        </div>
+
+        <button class="navbar-toggle" @onclick="ToggleNavMenu">
+            ☰
+        </button>
+
+        <div class="navbar-menu @(collapseNavMenu ? "collapsed" : "")">
+            <div class="nav-links">
+                <NavLink href="/" Match="NavLinkMatch.All" class="nav-link-btn">
+                    Home
+                </NavLink>
+
+                <NavLink href="/doctors" class="nav-link-btn">
+                    Find Doctors
+                </NavLink>
+
+                @if (AuthService.IsAuthenticated())
+                {
+                    <NavLink href="/my-appointments" class="nav-link-btn">
+                        My Appointments
+                    </NavLink>
+                    <NavLink href="/dashboard" class="nav-link-btn">
+                        Dashboard
+                    </NavLink>
+                }
+            </div>
+
+            <div class="nav-actions">
+                @if (AuthService.IsAuthenticated())
+                {
+                    <span class="user-name">👤 @AuthService.CurrentUser?.Username</span>
+                    <button class="btn-logout" @onclick="HandleLogout">
+                        Logout
+                    </button>
+                    <button class="btn-delete" @onclick="HandleDeleteUser">
+                        Delete User
+                    </button>
+                }
+                else
+                {
+                    <a href="/login" class="btn-login">Login</a>
+                    <a href="/register" class="btn-register">Register</a>
+                }
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+        AuthService.OnAuthStateChanged += OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        StateHasChanged();
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    private async Task HandleDeleteUser()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete your account? This action cannot be undone.");
+        if (confirmed)
+        {
+            await AuthService.DeleteCurrentUserAsync();
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= OnAuthStateChanged;
+    }
+}

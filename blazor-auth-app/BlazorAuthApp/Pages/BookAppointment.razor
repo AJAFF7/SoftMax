@@ -1,0 +1,210 @@
+@page "/book-appointment/{DoctorId:int}"
+@using BlazorAuthApp.Models
+@using BlazorAuthApp.Services
+@inject DoctorService DoctorService
+@inject AppointmentService AppointmentService
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+<PageTitle>Book Appointment</PageTitle>
+
+<div class="book-appointment-page">
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    }
+    else if (doctor == null)
+    {
+        <div class="error-message">
+            <p>Doctor not found.</p>
+            <button class="btn-secondary" @onclick="GoBackToDoctors">
+                Back to Doctors
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="appointment-container">
+            <div class="doctor-summary">
+                <div class="doctor-image-container">
+                    <img src="@doctor.ImageUrl" alt="@doctor.FullName" />
+                </div>
+                <div class="doctor-details">
+                    <h2>Dr. @doctor.FullName</h2>
+                    <p class="specialization">@doctor.Specialization</p>
+                    <div class="info-row">
+                        <span>⭐ @doctor.YearsOfExperience years experience</span>
+                    </div>
+                    <div class="info-row">
+                        <span>💰 Consultation Fee: $@doctor.ConsultationFee</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="appointment-form">
+                <h3>Book Your Appointment</h3>
+                
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">@errorMessage</div>
+                }
+                
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                        <button class="btn-primary" @onclick="ViewMyAppointments">
+                            View My Appointments
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="appointmentRequest" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="form-group">
+                            <label>Patient Name *</label>
+                            <InputText @bind-Value="appointmentRequest.PatientName" class="form-control" placeholder="Enter your full name" />
+                            <ValidationMessage For="() => appointmentRequest.PatientName" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <InputText @bind-Value="appointmentRequest.PatientEmail" type="email" class="form-control" placeholder="your.email@example.com" />
+                            <ValidationMessage For="() => appointmentRequest.PatientEmail" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Phone Number *</label>
+                            <InputText @bind-Value="appointmentRequest.PatientPhone" class="form-control" placeholder="+1-555-0100" />
+                            <ValidationMessage For="() => appointmentRequest.PatientPhone" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Appointment Date *</label>
+                            <InputDate @bind-Value="appointmentRequest.AppointmentDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <ValidationMessage For="() => appointmentRequest.AppointmentDate" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Time Slot *</label>
+                            <InputSelect @bind-Value="appointmentRequest.TimeSlot" class="form-control">
+                                <option value="">Select a time slot</option>
+                                @foreach (var slot in timeSlots)
+                                {
+                                    <option value="@slot">@slot</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => appointmentRequest.TimeSlot" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Symptoms / Reason for Visit</label>
+                            <InputTextArea @bind-Value="appointmentRequest.Symptoms" class="form-control" rows="4" placeholder="Please describe your symptoms or reason for visit..." />
+                            <ValidationMessage For="() => appointmentRequest.Symptoms" />
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" @onclick="GoBackToDoctors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn-primary" disabled="@isSubmitting">
+                                @(isSubmitting ? "Booking..." : "Book Appointment")
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int DoctorId { get; set; }
+
+    private Doctor? doctor;
+    private CreateAppointmentRequest appointmentRequest = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private List<string> timeSlots = new()
+    {
+        "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+        "12:00 PM", "12:30 PM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
+        "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated())
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadDoctor();
+        
+        // Pre-fill with user data if available
+        var currentUser = AuthService.CurrentUser;
+        if (currentUser != null)
+        {
+            appointmentRequest.PatientEmail = currentUser.Username + "@example.com";
+        }
+    }
+
+    private async Task LoadDoctor()
+    {
+        isLoading = true;
+        doctor = await DoctorService.GetDoctorByIdAsync(DoctorId);
+        
+        if (doctor != null)
+        {
+            appointmentRequest.DoctorId = doctor.Id;
+            appointmentRequest.AppointmentDate = DateTime.Today.AddDays(1);
+        }
+        
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        var (success, message) = await AppointmentService.CreateAppointmentAsync(appointmentRequest);
+        
+        if (success)
+        {
+            successMessage = message;
+            appointmentRequest = new CreateAppointmentRequest
+            {
+                DoctorId = DoctorId,
+                AppointmentDate = DateTime.Today.AddDays(1)
+            };
+        }
+        else
+        {
+            errorMessage = message;
+        }
+
+        isSubmitting = false;
+    }
+
+    private void GoBackToDoctors()
+    {
+        Navigation.NavigateTo("/doctors");
+    }
+
+    private void ViewMyAppointments()
+    {
+        Navigation.NavigateTo("/my-appointments");
+    }
+}

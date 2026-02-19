@@ -1,0 +1,301 @@
+@page "/my-appointments"
+@using BlazorAuthApp.Models
+@using BlazorAuthApp.Services
+@inject AppointmentService AppointmentService
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+<PageTitle>My Appointments</PageTitle>
+
+<div class="appointments-page">
+    <div class="page-header">
+        <h1 class="page-title">My Appointments</h1>
+        <button class="btn-new-appointment" @onclick="GoToDoctors">
+            + Book New Appointment
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading your appointments...</p>
+        </div>
+    }
+    else if (!appointments.Any())
+    {
+        <div class="no-appointments">
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <h2>No Appointments Yet</h2>
+                <p>You haven't booked any appointments yet. Find a doctor and book your first appointment!</p>
+                <button class="btn-primary" @onclick="GoToDoctors">
+                    Find a Doctor
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Calendar View -->
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button class="calendar-nav-btn" @onclick="PreviousMonth">
+                    ◀
+                </button>
+                <h2 class="calendar-title">@currentDate.ToString("MMMM yyyy")</h2>
+                <button class="calendar-nav-btn" @onclick="NextMonth">
+                    ▶
+                </button>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="calendar-day-header">Sun</div>
+                <div class="calendar-day-header">Mon</div>
+                <div class="calendar-day-header">Tue</div>
+                <div class="calendar-day-header">Wed</div>
+                <div class="calendar-day-header">Thu</div>
+                <div class="calendar-day-header">Fri</div>
+                <div class="calendar-day-header">Sat</div>
+
+                @foreach (var day in GetCalendarDays())
+                {
+                    var dayAppointments = GetAppointmentsForDay(day);
+                    var isToday = day.Date == DateTime.Today;
+                    var isCurrentMonth = day.Month == currentDate.Month;
+                    
+                    <div class="calendar-day @(isToday ? "today" : "") @(!isCurrentMonth ? "other-month" : "") @(dayAppointments.Any() ? "has-appointments" : "")">
+                        <div class="calendar-day-number">@day.Day</div>
+                        @if (dayAppointments.Any())
+                        {
+                            <div class="calendar-appointments">
+                                @foreach (var apt in dayAppointments.Take(2))
+                                {
+                                    <div class="calendar-appointment @GetStatusClass(apt.Status)" @onclick="() => SelectAppointment(apt)">
+                                        <div class="apt-time">@apt.TimeSlot</div>
+                                        <div class="apt-doctor">Dr. @apt.Doctor?.LastName</div>
+                                    </div>
+                                }
+                                @if (dayAppointments.Count() > 2)
+                                {
+                                    <div class="calendar-more">+@(dayAppointments.Count() - 2) more</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="appointments-tabs">
+            <button class="tab @(selectedTab == "all" ? "active" : "")" @onclick="@(() => selectedTab = "all")">
+                All (@appointments.Count)
+            </button>
+            <button class="tab @(selectedTab == "upcoming" ? "active" : "")" @onclick="@(() => selectedTab = "upcoming")">
+                Upcoming (@appointments.Count(a => a.Status == "Pending" || a.Status == "Confirmed"))
+            </button>
+            <button class="tab @(selectedTab == "completed" ? "active" : "")" @onclick="@(() => selectedTab = "completed")">
+                Completed (@appointments.Count(a => a.Status == "Completed"))
+            </button>
+            <button class="tab @(selectedTab == "cancelled" ? "active" : "")" @onclick="@(() => selectedTab = "cancelled")">
+                Cancelled (@appointments.Count(a => a.Status == "Cancelled"))
+            </button>
+        </div>
+
+        <div class="appointments-list">
+            @foreach (var appointment in FilteredAppointments)
+            {
+                <div class="appointment-card @GetStatusClass(appointment.Status)">
+                    <div class="appointment-header">
+                        <div class="doctor-info">
+                            @if (appointment.Doctor != null)
+                            {
+                                <img src="@appointment.Doctor.ImageUrl" alt="@appointment.Doctor.FullName" class="doctor-avatar" />
+                                <div>
+                                    <h3>Dr. @appointment.Doctor.FullName</h3>
+                                    <p class="specialization">@appointment.Doctor.Specialization</p>
+                                </div>
+                            }
+                        </div>
+                        <div class="status-badge @GetStatusClass(appointment.Status)">
+                            @appointment.Status
+                        </div>
+                    </div>
+
+                    <div class="appointment-details">
+                        <div class="detail-row">
+                            <span class="detail-icon">📅</span>
+                            <span class="detail-label">Date:</span>
+                            <span class="detail-value">@appointment.AppointmentDate.ToString("MMMM dd, yyyy")</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-icon">🕐</span>
+                            <span class="detail-label">Time:</span>
+                            <span class="detail-value">@appointment.TimeSlot</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-icon">👤</span>
+                            <span class="detail-label">Patient:</span>
+                            <span class="detail-value">@appointment.PatientName</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(appointment.Symptoms))
+                        {
+                            <div class="detail-row symptoms">
+                                <span class="detail-icon">📝</span>
+                                <span class="detail-label">Symptoms:</span>
+                                <span class="detail-value">@appointment.Symptoms</span>
+                            </div>
+                        }
+                        @if (appointment.Doctor != null)
+                        {
+                            <div class="detail-row">
+                                <span class="detail-icon">💰</span>
+                                <span class="detail-label">Fee:</span>
+                                <span class="detail-value fee">$@appointment.Doctor.ConsultationFee</span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (appointment.Status != "Cancelled" && appointment.Status != "Completed")
+                    {
+                        <div class="appointment-actions">
+                            <button class="btn-cancel" @onclick="() => CancelAppointment(appointment.Id)">
+                                Cancel Appointment
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Appointment> appointments = new();
+    private bool isLoading = true;
+    private string selectedTab = "all";
+    private DateTime currentDate = DateTime.Today;
+    private Appointment? selectedAppointment = null;
+
+    private IEnumerable<Appointment> FilteredAppointments
+    {
+        get
+        {
+            return selectedTab switch
+            {
+                "upcoming" => appointments.Where(a => a.Status == "Pending" || a.Status == "Confirmed"),
+                "completed" => appointments.Where(a => a.Status == "Completed"),
+                "cancelled" => appointments.Where(a => a.Status == "Cancelled"),
+                _ => appointments
+            };
+        }
+    }
+
+    private List<DateTime> GetCalendarDays()
+    {
+        var days = new List<DateTime>();
+        var firstDay = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var lastDay = firstDay.AddMonths(1).AddDays(-1);
+        
+        // Get day of week for first day (0 = Sunday)
+        int startOffset = (int)firstDay.DayOfWeek;
+        
+        // Add previous month days
+        for (int i = startOffset - 1; i >= 0; i--)
+        {
+            days.Add(firstDay.AddDays(-i - 1));
+        }
+        
+        // Add current month days
+        for (int i = 0; i < lastDay.Day; i++)
+        {
+            days.Add(firstDay.AddDays(i));
+        }
+        
+        // Add next month days to complete the grid (42 days = 6 weeks)
+        int remainingDays = 42 - days.Count;
+        for (int i = 1; i <= remainingDays; i++)
+        {
+            days.Add(lastDay.AddDays(i));
+        }
+        
+        return days;
+    }
+
+    private List<Appointment> GetAppointmentsForDay(DateTime day)
+    {
+        return appointments
+            .Where(a => a.AppointmentDate.Date == day.Date)
+            .OrderBy(a => a.TimeSlot)
+            .ToList();
+    }
+
+    private void PreviousMonth()
+    {
+        currentDate = currentDate.AddMonths(-1);
+    }
+
+    private void NextMonth()
+    {
+        currentDate = currentDate.AddMonths(1);
+    }
+
+    private void SelectAppointment(Appointment appointment)
+    {
+        selectedAppointment = appointment;
+        selectedTab = "all";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated())
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAppointments();
+    }
+
+    private async Task LoadAppointments()
+    {
+        isLoading = true;
+        appointments = await AppointmentService.GetUserAppointmentsAsync();
+        isLoading = false;
+    }
+
+    private async Task CancelAppointment(int appointmentId)
+    {
+        if (confirm("Are you sure you want to cancel this appointment?"))
+        {
+            var success = await AppointmentService.CancelAppointmentAsync(appointmentId);
+            if (success)
+            {
+                await LoadAppointments();
+            }
+        }
+    }
+
+    private bool confirm(string message)
+    {
+        // In a real app, use a modal dialog
+        return true;
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status.ToLower() switch
+        {
+            "pending" => "status-pending",
+            "confirmed" => "status-confirmed",
+            "completed" => "status-completed",
+            "cancelled" => "status-cancelled",
+            _ => ""
+        };
+    }
+
+    private void GoToDoctors()
+    {
+        Navigation.NavigateTo("/doctors");
+    }
+}
