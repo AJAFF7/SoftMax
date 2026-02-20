@@ -21,20 +21,24 @@
         <div class="navbar-menu @(collapseNavMenu ? "collapsed" : "")">
             <div class="nav-links">
                 <NavLink href="/" Match="NavLinkMatch.All" class="nav-link-btn">
-                    Home
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
                 </NavLink>
 
                 <NavLink href="/doctors" class="nav-link-btn">
-                    Find Doctors
+                    <span class="nav-icon">🩺</span>
+                    <span class="nav-text">Find Doctors</span>
                 </NavLink>
 
                 @if (AuthService.IsAuthenticated())
                 {
                     <NavLink href="/my-appointments" class="nav-link-btn">
-                        My Appointments
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-text">My Appointments</span>
                     </NavLink>
                     <NavLink href="/dashboard" class="nav-link-btn">
-                        Dashboard
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
                     </NavLink>
                 }
             </div>
