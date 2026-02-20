@@ -13,14 +13,8 @@
     <div class="login-card">
         <div class="login-header">
             <h2>🔑 SoftMax Portal</h2>
-            <p>Assistant Access - Scan QR Code or Enter Credentials</p>
+            <p>Assistant Access - QR Code Sign-In</p>
         </div>
-
-        <!-- <div class="alert alert-info" style="background: #e3f2fd; color: #1976d2; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
-            <strong>📝 Test Credentials:</strong><br/>
-            Username: <code>jaff</code> or Barcode: <code>AST-20260219-82632</code><br/>
-            Password: <code>Jaff123!</code>
-        </div> -->
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -32,44 +26,19 @@
         @if (!showScanner)
         {
             <div class="qr-login-section">
-                <button type="button" class="btn-qr-scan" @onclick="StartQRScanner">
-                     Scan QR Code to Login
-                </button>
-                <div class="divider">
-                    <span>OR</span>
+                <div class="qr-login-info">
+                    <div class="qr-icon">📱</div>
+                    <h3>Scan QR Code to Login</h3>
+                    <p>Click the button below to open your camera and scan your QR code badge</p>
                 </div>
+                <button type="button" class="btn-qr-scan" @onclick="StartQRScanner">
+                     Open Camera & Scan QR Code
+                </button>
             </div>
 
-            <EditForm Model="@loginRequest" OnValidSubmit="HandleLogin">
-            <DataAnnotationsValidator />
-            
-            <div class="form-group">
-                <label>Username or Barcode</label>
-                <InputText @bind-Value="loginRequest.Username" class="form-control" placeholder="Enter username " />
-                <ValidationMessage For="@(() => loginRequest.Username)" />
+            <div class="login-footer">
+                <p>Regular user? <a href="/login">User Login</a></p>
             </div>
-
-            <div class="form-group">
-                <label>Password</label>
-                <InputText @bind-Value="loginRequest.Password" type="password" class="form-control" placeholder="Enter your password" />
-                <ValidationMessage For="@(() => loginRequest.Password)" />
-            </div>
-
-            <button type="submit" class="btn-login" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span>Logging in...</span>
-                }
-                else
-                {
-                    <span>Login</span>
-                }
-            </button>
-        </EditForm>
-
-        <div class="login-footer">
-            <p>Regular user? <a href="/login">User Login</a></p>
-        </div>
         }
         else
         {
@@ -88,7 +57,6 @@
 </div>
 
 @code {
-    private AssistantLoginRequest loginRequest = new();
     private string errorMessage = string.Empty;
     private bool isLoading = false;
     private bool showScanner = false;
@@ -97,37 +65,6 @@
     protected override void OnInitialized()
     {
         dotNetHelper = DotNetObjectReference.Create(this);
-    }
-
-    private async Task HandleLogin()
-    {
-        errorMessage = string.Empty;
-        isLoading = true;
-
-        Console.WriteLine($"[AssistantLogin] Form submitted");
-        Console.WriteLine($"[AssistantLogin] Username field: '{loginRequest.Username}'");
-        Console.WriteLine($"[AssistantLogin] Password field length: {loginRequest.Password?.Length ?? 0}");
-        Console.WriteLine($"[AssistantLogin] Password field: '{loginRequest.Password}'");
-
-        var (success, message, assistant) = await AssistantService.LoginAsync(loginRequest);
-
-        Console.WriteLine($"[AssistantLogin] Result - Success: {success}, Message: '{message}'");
-
-        if (success && assistant != null)
-        {
-            Console.WriteLine($"[AssistantLogin] Login successful, navigating to assistant dashboard");
-            // Force a delay to ensure local storage is saved
-            await Task.Delay(100);
-            NavigationManager.NavigateTo("/assistant-dashboard", forceLoad: true);
-        }
-        else
-        {
-            Console.WriteLine($"[AssistantLogin] Login failed: {message}");
-            errorMessage = $"Login failed: {message}";
-        }
-
-        isLoading = false;
-        StateHasChanged();
     }
 
     private async Task StartQRScanner()
