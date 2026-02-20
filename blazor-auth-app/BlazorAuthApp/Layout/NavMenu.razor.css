@@ -109,7 +109,7 @@
     border: 2px solid transparent;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
     color: #ffffff;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 1rem;
