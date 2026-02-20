@@ -68,8 +68,8 @@ pipeline {
             }
         }
 
-        // Test Group 1: Tests 1-4 (Running in Parallel)
-        stage('Test Group 1: Tests 1-4') {
+        // Pre-Deployment Tests: Tests 1-7 (Running in Parallel)
+        stage('Pre-Deployment Tests: Tests 1-7') {
             parallel {
                 stage('Test 1: Code Quality Check') {
                     steps {
@@ -143,12 +143,7 @@ pipeline {
                         }
                     }
                 }
-            }
-        }
-        
-        // Test Group 2: Tests 5-8 (Running in Parallel)
-        stage('Test Group 2: Tests 5-8') {
-            parallel {
+                
                 stage('Test 5: Database Migration Check') {
                     steps {
                         script {
@@ -214,7 +209,51 @@ pipeline {
                         }
                     }
                 }
-                
+            }
+        }
+        
+        stage('Publish') {
+            steps {
+                script {
+                    echo '📦 Publishing the application...'
+                    dir('blazor-auth-app') {
+                        sh 'dotnet publish blazor-auth-app.sln --configuration Release --no-build --output ./publish'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    echo '🐳 Building Docker images...'
+                    dir('blazor-auth-app') {
+                        sh 'docker-compose build'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Deploy') {
+            steps {
+                script {
+                    echo '🚀 Deploying with Docker Compose...'
+                    dir('blazor-auth-app') {
+                        sh '''
+                            docker-compose down || true
+                            docker-compose up -d
+                            echo "Waiting for services to start..."
+                            sleep 10
+                            docker-compose ps
+                        '''
+                    }
+                }
+            }
+        }
+        
+        // Post-Deployment Tests: Tests 8-16 (Running in Parallel)
+        stage('Post-Deployment Tests: Tests 8-16') {
+            parallel {
                 stage('Test 8: API Endpoint Tests') {
                     steps {
                         script {
@@ -241,13 +280,229 @@ pipeline {
                         }
                     }
                 }
+                
+                stage('Test 9: Blazor App Tests') {
+                    steps {
+                        script {
+                            echo '✓ Test 9: Testing Blazor application...'
+                            sh '''
+                                echo "Test 9.1: Checking Blazor app homepage..."
+                                curl -f -s http://localhost:80 > /dev/null && echo "✓ Blazor app is accessible" || echo "✗ Blazor app not accessible"
+                                
+                                echo "Test 9.2: Checking for Blazor framework files..."
+                                curl -f -s http://localhost:80/_framework/blazor.webassembly.js > /dev/null && echo "✓ Blazor framework loaded" || echo "⚠️ Blazor framework file not found"
+                                
+                                echo "Test 9.3: Checking API proxy..."
+                                curl -f -s http://localhost:80/api/doctors > /dev/null && echo "✓ API proxy working" || echo "✗ API proxy failed"
+                                
+                                echo "Test 9.4: Checking static resources..."
+                                curl -s -o /dev/null -w "%{http_code}" http://localhost:80/css/app.css | grep -q "200" && echo "✓ CSS loaded" || echo "⚠️ CSS not found"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Test 10: Database Tests') {
+                    steps {
+                        script {
+                            echo '✓ Test 10: Testing database connectivity...'
+                            dir('blazor-auth-app') {
+                                sh '''
+                                    echo "Test 10.1: Checking PostgreSQL container..."
+                                    docker-compose ps postgres | grep -q "Up" && echo "✓ PostgreSQL is running" || echo "✗ PostgreSQL not running"
+                                    
+                                    echo "Test 10.2: Testing database connection..."
+                                    docker-compose exec -T postgres psql -U postgres -d blazorauthdb -c "SELECT 1;" && echo "✓ Database connection successful" || echo "✗ Database connection failed"
+                                   
+                                    echo "Test 10.3: Checking for tables..."
+                                    TABLE_COUNT=$(docker-compose exec -T postgres psql -U postgres -d blazorauthdb -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | tr -d ' ')
+                                    echo "Found $TABLE_COUNT tables in database"
+                                    
+                                    echo "Test 10.4: Checking migrations..."
+                                    docker-compose exec -T api dotnet ef migrations list 2>/dev/null || echo "Migration check completed"
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Test 11: Performance Tests') {
+                    steps {
+                        script {
+                            echo '✓ Test 11: Running performance tests...'
+                            sh '''
+                                echo "Test 11.1: Measuring API response time..."
+                                START=$(date +%s%N)
+                                curl -s http://localhost:8080/api/doctors > /dev/null
+                                END=$(date +%s%N)
+                                DIFF=$((($END - $START) / 1000000))
+                                echo "API response time: ${DIFF}ms"
+                                if [ $DIFF -lt 1000 ]; then
+                                    echo "✓ Response time under 1 second"
+                                else
+                                    echo "⚠️ Response time over 1 second"
+                                fi
+                                
+                                echo "Test 11.2: Testing concurrent requests..."
+                                for i in {1..5}; do
+                                    curl -s http://localhost:8080/api/doctors > /dev/null &
+                                done
+                                wait
+                                echo "✓ Concurrent request test completed"
+                                
+                                echo "Test 11.3: Checking memory usage..."
+                                docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}" | grep blazor || echo "Container stats retrieved"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Test 12: Container Health Tests') {
+                    steps {
+                        script {
+                            echo '✓ Test 12: Testing container health...'
+                            dir('blazor-auth-app') {
+                                sh '''
+                                    echo "Test 12.1: Checking all containers..."
+                                    docker-compose ps
+                                    
+                                    echo "Test 12.2: Verifying container status..."
+                                    API_STATUS=$(docker-compose ps api | grep -c "Up" || echo "0")
+                                    BLAZOR_STATUS=$(docker-compose ps blazor-app | grep -c "Up" || echo "0")
+                                    POSTGRES_STATUS=$(docker-compose ps postgres | grep -c "Up" || echo "0")
+                                    
+                                    echo "API Container: $([ $API_STATUS -gt 0 ] && echo '✓ Running' || echo '✗ Not running')"
+                                    echo "Blazor Container: $([ $BLAZOR_STATUS -gt 0 ] && echo '✓ Running' || echo '✗ Not running')"
+                                    echo "PostgreSQL Container: $([ $POSTGRES_STATUS -gt 0 ] && echo '✓ Running' || echo '✗ Not running')"
+                                    
+                                    echo "Test 12.3: Checking container logs for errors..."
+                                    echo "Checking API logs..."
+                                    docker-compose logs --tail=20 api | grep -i error || echo "No errors in API logs"
+                                    
+                                    echo "Test 12.4: Checking network connectivity..."
+                                    docker-compose exec -T api ping -c 2 postgres && echo "✓ API can reach database" || echo "⚠️ Network issue detected"
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Test 13: Data Integrity Tests') {
+                    steps {
+                        script {
+                            echo '✓ Test 13: Testing data integrity...'
+                            dir('blazor-auth-app') {
+                                sh '''
+                                    echo "Test 13.1: Checking for default doctors..."
+                                    DOCTOR_COUNT=$(docker-compose exec -T postgres psql -U postgres -d blazorauthdb -t -c "SELECT COUNT(*) FROM \"Doctors\";" 2>/dev/null | tr -d ' ' || echo "0")
+                                    echo "Found $DOCTOR_COUNT doctors in database"
+                                    
+                                    echo "Test 13.2: Checking database schema..."
+                                    docker-compose exec -T postgres psql -U postgres -d blazorauthdb -c "\\dt" 2>/dev/null || echo "Schema check completed"
+                                    
+                                    echo "Test 13.3: Verifying table relationships..."
+                                    docker-compose exec -T postgres psql -U postgres -d blazorauthdb -c "SELECT table_name FROM information_schema.tables WHERE table_schema='public';" 2>/dev/null || echo "Table listing completed"
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Test 14: Integration Test') {
+                    steps {
+                        script {
+                            echo '✓ Test 14: Running end-to-end integration test...'
+                            sh '''
+                                echo "Test 14.1: Full stack health check..."
+                                
+                                # Check all three services
+                                ALL_GOOD=true
+                                
+                                # API Check
+                                if curl -f -s http://localhost:8080/api/doctors > /dev/null; then
+                                    echo "✓ API is healthy"
+                                else
+                                    echo "✗ API check failed"
+                                    ALL_GOOD=false
+                                fi
+                                
+                                # Blazor Check
+                                if curl -f -s http://localhost:80 > /dev/null; then
+                                    echo "✓ Blazor app is healthy"
+                                else
+                                    echo "✗ Blazor app check failed"
+                                    ALL_GOOD=false
+                                fi
+                                
+                                # Database Check
+                                if docker-compose exec -T postgres psql -U postgres -d blazorauthdb -c "SELECT 1;" > /dev/null 2>&1; then
+                                    echo "✓ Database is healthy"
+                                else
+                                    echo "✗ Database check failed"
+                                    ALL_GOOD=false
+                                fi
+                                
+                                if [ "$ALL_GOOD" = true ]; then
+                                    echo "✓ Full integration test passed"
+                                else
+                                    echo "⚠️ Some checks failed"
+                                fi
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Test 15: Logging & Monitoring') {
+                    steps {
+                        script {
+                            echo '✓ Test 15: Testing logging and monitoring...'
+                            dir('blazor-auth-app') {
+                                sh '''
+                                    echo "Test 15.1: Checking API logs..."
+                                    docker-compose logs --tail=50 api > /dev/null && echo "✓ API logs accessible" || echo "✗ Cannot access API logs"
+                                    
+                                    echo "Test 15.2: Checking Blazor app logs..."
+                                    docker-compose logs --tail=50 blazor-app > /dev/null && echo "✓ Blazor logs accessible" || echo "✗ Cannot access Blazor logs"
+                                    
+                                    echo "Test 15.3: Checking database logs..."
+                                    docker-compose logs --tail=50 postgres > /dev/null && echo "✓ Database logs accessible" || echo "✗ Cannot access DB logs"
+                                    
+                                    echo "Test 15.4: Verifying log volume..."
+                                    LOG_COUNT=$(docker-compose logs api | wc -l)
+                                    echo "Found $LOG_COUNT log lines in API container"
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Test 16: Environment Variables') {
+                    steps {
+                        script {
+                            echo '✓ Test 16: Testing environment variables and configuration...'
+                            dir('blazor-auth-app') {
+                                sh '''
+                                    echo "Test 16.1: Checking .NET environment..."
+                                    dotnet --info | grep -i "version" && echo "✓ .NET environment verified" || echo "⚠️ Cannot verify .NET"
+                                    
+                                    echo "Test 16.2: Checking Docker environment..."
+                                    docker info > /dev/null 2>&1 && echo "✓ Docker environment verified" || echo "⚠️ Docker check failed"
+                                    
+                                    echo "Test 16.3: Verifying container environment variables..."
+                                    docker-compose exec -T api printenv | grep -i "ASPNETCORE" && echo "✓ API env vars present" || echo "✓ Default configuration"
+                                    
+                                    echo "Test 16.4: Checking PostgreSQL environment..."
+                                    docker-compose exec -T postgres printenv | grep -i "POSTGRES" && echo "✓ Database env vars present" || echo "⚠️ No DB env vars found"
+                                '''
+                            }
+                        }
+                    }
+                }
             }
         }
-        
-        // Test Group 3: Tests 9-12 (Running in Parallel)
-        stage('Test Group 3: Tests 9-12') {
-            parallel {
-                stage('Test 9: Blazor App Tests') {
+    }
+
+    post {
                     steps {
                         script {
                             echo '✓ Test 9: Testing Blazor application...'
@@ -471,46 +726,6 @@ pipeline {
                 }
             }
         }
-        
-        // Deployment Stages - After All Tests Pass
-        stage('Publish') {
-            steps {
-                script {
-                    echo '📦 Publishing the application...'
-                    dir('blazor-auth-app') {
-                        sh 'dotnet publish blazor-auth-app.sln --configuration Release --no-build --output ./publish'
-                    }
-                }
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                script {
-                    echo '🐳 Building Docker images...'
-                    dir('blazor-auth-app') {
-                        sh 'docker-compose build'
-                    }
-                }
-            }
-        }
-
-        stage('Docker Deploy') {
-            steps {
-                script {
-                    echo '🚀 Deploying with Docker Compose...'
-                    dir('blazor-auth-app') {
-                        sh '''
-                            docker-compose down || true
-                            docker-compose up -d
-                            echo "Waiting for services to start..."
-                            sleep 10
-                            docker-compose ps
-                        '''
-                    }
-                }
-            }
-        }
     }
 
     post {
@@ -528,38 +743,36 @@ pipeline {
             echo '1️⃣  BUILD STAGE'
             echo '    └─ Solution Compiled Successfully'
             echo ''
-            echo '2️⃣  TEST GROUP 1: Tests 1-4 (PARALLEL EXECUTION)'
+            echo '2️⃣  PRE-DEPLOYMENT TESTS: Tests 1-7 (PARALLEL EXECUTION)'
             echo '    ├─ Test 1: Code Quality Check'
             echo '    ├─ Test 2: Unit Tests'
             echo '    ├─ Test 3: Configuration Validation'
-            echo '    └─ Test 4: Docker Image Validation'
-            echo ''
-            echo '3️⃣  TEST GROUP 2: Tests 5-8 (PARALLEL EXECUTION)'
+            echo '    ├─ Test 4: Docker Image Validation'
             echo '    ├─ Test 5: Database Migration Check'
             echo '    ├─ Test 6: Security Check'
-            echo '    ├─ Test 7: File Structure Validation'
-            echo '    └─ Test 8: API Endpoint Tests'
+            echo '    └─ Test 7: File Structure Validation'
             echo ''
-            echo '4️⃣  TEST GROUP 3: Tests 9-12 (PARALLEL EXECUTION)'
+            echo '3️⃣  DEPLOYMENT STAGES (SEQUENTIAL)'
+            echo '    ├─ Publish Application'
+            echo '    ├─ Docker Build'
+            echo '    └─ Docker Deploy'
+            echo ''
+            echo '4️⃣  POST-DEPLOYMENT TESTS: Tests 8-16 (PARALLEL EXECUTION)'
+            echo '    ├─ Test 8: API Endpoint Tests'
             echo '    ├─ Test 9: Blazor App Tests'
             echo '    ├─ Test 10: Database Tests'
             echo '    ├─ Test 11: Performance Tests'
-            echo '    └─ Test 12: Container Health Tests'
-            echo ''
-            echo '5️⃣  TEST GROUP 4: Tests 13-16 (PARALLEL EXECUTION)'
+            echo '    ├─ Test 12: Container Health Tests'
             echo '    ├─ Test 13: Data Integrity Tests'
             echo '    ├─ Test 14: Integration Test'
             echo '    ├─ Test 15: Logging & Monitoring'
             echo '    └─ Test 16: Environment Variables'
             echo ''
-            echo '6️⃣  DEPLOYMENT STAGES (SEQUENTIAL)'
-            echo '    ├─ Publish Application'
-            echo '    ├─ Docker Build'
-            echo '    └─ Docker Deploy'
-            echo ''
             echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-            echo '📈 TOTAL: 4 Test Groups | 16 Tests | 52 Sub-Tests = 68 Tests'
-            echo '⚡ Tests organized in FOUR parallel groups (4 tests each)!'
+            echo '📈 TOTAL: 16 Tests | 52 Sub-Tests = 68 Tests'
+            echo '⚡ Tests organized in TWO phases:'
+            echo '   • Pre-Deployment (7 tests) - Code quality & validation'
+            echo '   • Post-Deployment (9 tests) - Live system verification'
             echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
             echo ''
             echo '🚀 SoftMax Portal is now running!'
@@ -579,19 +792,19 @@ pipeline {
             echo ''
             echo '🔍 Check which stage failed:'
             echo '   - Build Stage'
-            echo '   - Test Group 1 (Tests 1-4)'
-            echo '   - Test Group 2 (Tests 5-8)'
-            echo '   - Test Group 3 (Tests 9-12)'
-            echo '   - Test Group 4 (Tests 13-16)'
-            echo '   - Publish Stage'
-            echo '   - Docker Build Stage'
-            echo '   - Docker Deploy Stage'
+            echo '   - Pre-Deployment Tests (Tests 1-7)'
+            echo '   - Deployment Stages (Publish/Docker Build/Deploy)'
+            echo '   - Post-Deployment Tests (Tests 8-16)'
             echo ''
-            echo '📋 Individual tests per group:'
-            echo '   Group 1 (Tests 1-4): Code Quality, Unit Tests, Configuration, Docker'
-            echo '   Group 2 (Tests 5-8): Migrations, Security, File Structure, API Endpoints'
-            echo '   Group 3 (Tests 9-12): Blazor App, Database, Performance, Health'
-            echo '   Group 4 (Tests 13-16): Data Integrity, Integration, Logging, Environment'
+            echo '📋 Test details:'
+            echo '   Pre-Deployment (Tests 1-7):'
+            echo '     • Code Quality, Unit Tests, Configuration'
+            echo '     • Docker Image, Migrations, Security, File Structure'
+            echo ''
+            echo '   Post-Deployment (Tests 8-16):'
+            echo '     • API Endpoints, Blazor App, Database'
+            echo '     • Performance, Health, Data Integrity'
+            echo '     • Integration, Logging, Environment'
             echo ''
             echo '💡 Common issues:'
             echo '   - Docker services not starting'
