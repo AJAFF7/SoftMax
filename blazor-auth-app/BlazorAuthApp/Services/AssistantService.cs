@@ -124,6 +124,70 @@ namespace BlazorAuthApp.Services
             }
         }
 
+        public async Task<(bool success, string message, Assistant? assistant)> LoginByFaceAsync(string faceDescriptor)
+        {
+            try
+            {
+                Console.WriteLine($"[AssistantService] LoginByFaceAsync called");
+                
+                var requestData = new { FaceDescriptor = faceDescriptor };
+                var response = await _httpClient.PostAsJsonAsync($"{ApiUrl}/assistants/login-face", requestData);
+
+                Console.WriteLine($"[AssistantService] Face login response: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var assistant = await response.Content.ReadFromJsonAsync<Assistant>();
+                    if (assistant != null)
+                    {
+                        // Add login timestamp
+                        var loginInfo = new AssistantLoginInfo
+                        {
+                            Assistant = assistant,
+                            LoginTime = DateTime.Now,
+                            LastActivity = DateTime.Now
+                        };
+                        
+                        await _localStorage.SetItemAsync("currentAssistant", assistant);
+                        await _localStorage.SetItemAsync("assistantLoginInfo", loginInfo);
+                        Console.WriteLine($"[AssistantService] Face login successful for: {assistant.Username}");
+                        return (true, "Login successful!", assistant);
+                    }
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[AssistantService] Face login failed: {errorContent}");
+                return (false, errorContent, null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AssistantService] Face login error: {ex.Message}");
+                return (false, $"Error: {ex.Message}", null);
+            }
+        }
+
+        public async Task<(bool success, string message)> RegisterFaceAsync(string email, string faceDescriptor)
+        {
+            try
+            {
+                var requestData = new { Email = email, FaceDescriptor = faceDescriptor };
+                var response = await _httpClient.PostAsJsonAsync($"{ApiUrl}/assistants/register-face", requestData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, "Face registered successfully!");
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return (false, errorContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Face registration error: {ex.Message}");
+                return (false, $"Error: {ex.Message}");
+            }
+        }
+
         public async Task<Assistant?> GetCurrentAssistantAsync()
         {
             try

@@ -8,6 +8,7 @@ namespace BlazorAuthApp.Models
         public string Username { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string ETagBarcode { get; set; } = string.Empty;
+        public string? FaceDescriptor { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
     }

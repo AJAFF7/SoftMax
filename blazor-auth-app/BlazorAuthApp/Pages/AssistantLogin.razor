@@ -27,7 +27,7 @@
         {
             <div class="qr-login-section">
                 <div class="qr-login-info">
-                    <div class="qr-icon">📱</div>
+                    <div class="qr-icon"></div>
                     <h3>Scan QR Code to Login</h3>
                     <p>Click the button below to open your camera and scan your QR code badge</p>
                 </div>
@@ -36,8 +36,68 @@
                 </button>
             </div>
 
+            <div class="or-divider">
+                <span>OR</span>
+            </div>
+
+            <div class="face-login-section">
+                <div class="face-login-info">
+                    <div class="face-icon">👤</div>
+                    <h3>Use Face Recognition</h3>
+                    <p>Login instantly using facial recognition</p>
+                </div>
+                <button type="button" class="btn-face-scan" @onclick="StartFaceRecognition">
+                     Open Camera & Scan Face
+                </button>
+            </div>
+
             <div class="login-footer">
                 <p>Regular user? <a href="/login">User Login</a></p>
+            </div>
+        }
+        else if (showScanner && !showFaceRecognition)
+        {
+            <div class="qr-scanner-section">
+                <div class="scanner-header">
+                    <h3>Scan Your QR Code</h3>
+                    <p>Position the QR code within the camera frame</p>
+                </div>
+                <div id="qr-reader" style="width: 100%;"></div>
+                <button type="button" class="btn-cancel" @onclick="StopQRScanner">
+                    Cancel
+                </button>
+            </div>
+        }
+        else if (showFaceRecognition)
+        {
+            <div class="face-scanner-section">
+                <div class="scanner-header">
+                    <h3>Face Recognition</h3>
+                    <p>@faceStatusMessage</p>
+                </div>
+                <div class="video-container">
+                    <video id="face-video" autoplay muted playsinline></video>
+                    @if (isFaceReady && !isProcessingFace)
+                    {
+                        <div class="face-overlay"></div>
+                    }
+                </div>
+                @if (isFaceReady && !isProcessingFace)
+                {
+                    <button type="button" class="btn-capture-face" @onclick="CaptureFace">
+                        Capture Face & Login
+                    </button>
+                }
+                @if (isProcessingFace)
+                {
+                    <div class="processing-indicator">
+                        <div class="spinner"></div>
+                        <p>Processing...</p>
+                    </div>
+                }
+                <button type="button" class="btn-cancel" @onclick="StopFaceRecognition" disabled="@isProcessingFace">
+                    Cancel
+                </button>
             </div>
         }
         else
@@ -60,6 +120,10 @@
     private string errorMessage = string.Empty;
     private bool isLoading = false;
     private bool showScanner = false;
+    private bool showFaceRecognition = false;
+    private bool isFaceReady = false;
+    private bool isProcessingFace = false;
+    private string faceStatusMessage = "Initializing camera...";
     private DotNetObjectReference<AssistantLogin>? dotNetHelper;
 
     protected override void OnInitialized()
@@ -70,6 +134,7 @@
     private async Task StartQRScanner()
     {
         showScanner = true;
+        showFaceRecognition = false;
         errorMessage = string.Empty;
         StateHasChanged();
         
@@ -95,6 +160,117 @@
         catch { }
         
         showScanner = false;
+    }
+
+    private async Task StartFaceRecognition()
+    {
+        showFaceRecognition = true;
+        showScanner = false;
+        errorMessage = string.Empty;
+        isFaceReady = false;
+        faceStatusMessage = "Initializing camera...";
+        StateHasChanged();
+        
+        await Task.Delay(100); // Wait for DOM to update
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("faceRecognition.start", "face-video", dotNetHelper);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Camera error: {ex.Message}";
+            showFaceRecognition = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopFaceRecognition()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("faceRecognition.stop");
+        }
+        catch { }
+        
+        showFaceRecognition = false;
+        isFaceReady = false;
+        isProcessingFace = false;
+        faceStatusMessage = "Initializing camera...";
+    }
+
+    [JSInvokable]
+    public void OnCameraReady()
+    {
+        isFaceReady = true;
+        faceStatusMessage = "Camera ready! Position your face in the frame and click 'Capture Face & Login'";
+        StateHasChanged();
+    }
+
+    private async Task CaptureFace()
+    {
+        isProcessingFace = true;
+        faceStatusMessage = "Capturing face...";
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var faceDescriptor = await JSRuntime.InvokeAsync<string>("faceRecognition.captureFace");
+            
+            if (string.IsNullOrEmpty(faceDescriptor))
+            {
+                isProcessingFace = false;
+                faceStatusMessage = "Camera ready! Position your face in the frame and click 'Capture Face & Login'";
+                StateHasChanged();
+                return;
+            }
+
+            Console.WriteLine($"[AssistantLogin] Face captured, attempting login...");
+            faceStatusMessage = "Verifying face...";
+            StateHasChanged();
+
+            var (success, message, assistant) = await AssistantService.LoginByFaceAsync(faceDescriptor);
+
+            if (success && assistant != null)
+            {
+                Console.WriteLine($"[AssistantLogin] Face login successful, navigating to assistant dashboard");
+                await StopFaceRecognition();
+                await Task.Delay(100);
+                NavigationManager.NavigateTo("/assistant-dashboard", forceLoad: true);
+            }
+            else
+            {
+                Console.WriteLine($"[AssistantLogin] Face login failed: {message}");
+                errorMessage = message;
+                await StopFaceRecognition();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AssistantLogin] Face capture error: {ex.Message}");
+            errorMessage = $"Error: {ex.Message}";
+            isProcessingFace = false;
+            faceStatusMessage = "Camera ready! Position your face in the frame and click 'Capture Face & Login'";
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnFaceError(string error)
+    {
+        errorMessage = $"{error}";
+        isProcessingFace = false;
+        if (error.Contains("No face detected") || error.Contains("Error capturing face"))
+        {
+            faceStatusMessage = "Camera ready! Position your face in the frame and click 'Capture Face & Login'";
+        }
+        else
+        {
+            await StopFaceRecognition();
+        }
+        StateHasChanged();
     }
 
     [JSInvokable]
@@ -139,6 +315,7 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("qrScanner.stop");
+            await JSRuntime.InvokeVoidAsync("faceRecognition.stop");
         }
         catch { }
         

@@ -42,4 +42,20 @@ namespace BlazorAuthApp.Api.DTOs
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
     }
+
+    public class FaceLoginDto
+    {
+        [Required]
+        public string FaceDescriptor { get; set; } = string.Empty;
+    }
+
+    public class RegisterFaceDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string FaceDescriptor { get; set; } = string.Empty;
+    }
 }

@@ -32,6 +32,7 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>
         window.qrScanner = {
@@ -63,6 +64,108 @@
                         console.error('Stop error:', err);
                     });
                 }
+            }
+        };
+
+        window.faceRecognition = {
+            video: null,
+            stream: null,
+            isModelsLoaded: false,
+            dotnetHelper: null,
+
+            loadModels: async function () {
+                if (this.isModelsLoaded) return true;
+                
+                try {
+                    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                    this.isModelsLoaded = true;
+                    console.log('Face-api models loaded successfully');
+                    return true;
+                } catch (error) {
+                    console.error('Error loading face-api models:', error);
+                    return false;
+                }
+            },
+
+            start: async function (videoElementId, dotnetHelper) {
+                this.dotnetHelper = dotnetHelper;
+                
+                // Load models first
+                const modelsLoaded = await this.loadModels();
+                if (!modelsLoaded) {
+                    dotnetHelper.invokeMethodAsync('OnFaceError', 'Failed to load face recognition models');
+                    return;
+                }
+
+                try {
+                    this.video = document.getElementById(videoElementId);
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        } 
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.video.play();
+
+                    // Wait for video to be ready
+                    await new Promise((resolve) => {
+                        this.video.onloadedmetadata = () => {
+                            resolve();
+                        };
+                    });
+
+                    console.log('Face recognition camera started');
+                    dotnetHelper.invokeMethodAsync('OnCameraReady');
+                } catch (error) {
+                    console.error('Camera access error:', error);
+                    dotnetHelper.invokeMethodAsync('OnFaceError', 'Camera access denied. Please allow camera access.');
+                }
+            },
+
+            captureFace: async function () {
+                try {
+                    if (!this.video) {
+                        throw new Error('Video not initialized');
+                    }
+
+                    console.log('Detecting face...');
+                    const detection = await faceapi
+                        .detectSingleFace(this.video, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+
+                    if (!detection) {
+                        this.dotnetHelper.invokeMethodAsync('OnFaceError', 'No face detected. Please position your face in the camera.');
+                        return null;
+                    }
+
+                    console.log('Face detected successfully');
+                    const descriptor = Array.from(detection.descriptor);
+                    return JSON.stringify(descriptor);
+                } catch (error) {
+                    console.error('Face capture error:', error);
+                    this.dotnetHelper.invokeMethodAsync('OnFaceError', 'Error capturing face: ' + error.message);
+                    return null;
+                }
+            },
+
+            stop: function () {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                if (this.video) {
+                    this.video.srcObject = null;
+                    this.video = null;
+                }
+                this.dotnetHelper = null;
+                console.log('Face recognition stopped');
             }
         };
     </script>

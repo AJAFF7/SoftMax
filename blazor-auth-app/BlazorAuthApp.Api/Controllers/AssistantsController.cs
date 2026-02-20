@@ -89,7 +89,7 @@ namespace BlazorAuthApp.Api.Controllers
             }
 
             Console.WriteLine($"[AssistantsController] User found: {assistant.Username}, verifying password...");
-            if (!VerifyPassword(dto.Password, assistant.PasswordHash))
+            if (string.IsNullOrEmpty(dto.Password) || !VerifyPassword(dto.Password, assistant.PasswordHash))
             {
                 Console.WriteLine($"[AssistantsController] Password verification failed");
                 return Unauthorized("Invalid username or password");
@@ -148,6 +148,96 @@ namespace BlazorAuthApp.Api.Controllers
             };
 
             return Ok(response);
+        }
+
+        // POST: api/assistants/login-face
+        [HttpPost("login-face")]
+        public async Task<ActionResult<AssistantResponseDto>> LoginByFace([FromBody] FaceLoginDto dto)
+        {
+            Console.WriteLine($"[AssistantsController] Face login attempt");
+
+            if (string.IsNullOrEmpty(dto.FaceDescriptor))
+            {
+                return BadRequest("Face descriptor is required");
+            }
+
+            // Get all active assistants with face descriptors
+            var assistants = await _context.Assistants
+                .Where(a => a.IsActive && a.FaceDescriptor != null)
+                .ToListAsync();
+
+            if (!assistants.Any())
+            {
+                return Unauthorized("No registered faces found");
+            }
+
+            // Find matching face using similarity comparison
+            var inputDescriptor = ParseFaceDescriptor(dto.FaceDescriptor);
+            if (inputDescriptor == null || inputDescriptor.Length == 0)
+            {
+                return BadRequest("Invalid face descriptor format");
+            }
+
+            Assistant? matchedAssistant = null;
+            double highestSimilarity = 0;
+            const double SIMILARITY_THRESHOLD = 0.6; // 60% similarity required
+
+            foreach (var assistant in assistants)
+            {
+                if (string.IsNullOrEmpty(assistant.FaceDescriptor)) continue;
+
+                var storedDescriptor = ParseFaceDescriptor(assistant.FaceDescriptor);
+                if (storedDescriptor == null || storedDescriptor.Length == 0) continue;
+
+                var similarity = CalculateCosineSimilarity(inputDescriptor, storedDescriptor);
+                Console.WriteLine($"[AssistantsController] Similarity with {assistant.Username}: {similarity:F4}");
+
+                if (similarity > highestSimilarity && similarity >= SIMILARITY_THRESHOLD)
+                {
+                    highestSimilarity = similarity;
+                    matchedAssistant = assistant;
+                }
+            }
+
+            if (matchedAssistant == null)
+            {
+                Console.WriteLine($"[AssistantsController] No face match found (highest similarity: {highestSimilarity:F4})");
+                return Unauthorized("Face not recognized. Please try again or use QR code login.");
+            }
+
+            Console.WriteLine($"[AssistantsController] Face matched: {matchedAssistant.Username} (similarity: {highestSimilarity:F4})");
+
+            var response = new AssistantResponseDto
+            {
+                Id = matchedAssistant.Id,
+                FullName = matchedAssistant.FullName,
+                Email = matchedAssistant.Email,
+                Username = matchedAssistant.Username,
+                PhoneNumber = matchedAssistant.PhoneNumber,
+                ETagBarcode = matchedAssistant.ETagBarcode,
+                CreatedAt = matchedAssistant.CreatedAt,
+                IsActive = matchedAssistant.IsActive
+            };
+
+            return Ok(response);
+        }
+
+        // POST: api/assistants/register-face
+        [HttpPost("register-face")]
+        public async Task<ActionResult> RegisterFace([FromBody] RegisterFaceDto dto)
+        {
+            var assistant = await _context.Assistants
+                .FirstOrDefaultAsync(a => a.Email == dto.Email && a.IsActive);
+
+            if (assistant == null)
+            {
+                return NotFound("Assistant not found");
+            }
+
+            assistant.FaceDescriptor = dto.FaceDescriptor;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Face registered successfully" });
         }
 
         // GET: api/assistants/qrcode/{email}
@@ -239,6 +329,43 @@ namespace BlazorAuthApp.Api.Controllers
         {
             var hashOfInput = HashPassword(password);
             return hashOfInput == hash;
+        }
+
+        private double[]? ParseFaceDescriptor(string jsonDescriptor)
+        {
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<double[]>(jsonDescriptor);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private double CalculateCosineSimilarity(double[] vectorA, double[] vectorB)
+        {
+            if (vectorA.Length != vectorB.Length)
+                return 0;
+
+            double dotProduct = 0;
+            double magnitudeA = 0;
+            double magnitudeB = 0;
+
+            for (int i = 0; i < vectorA.Length; i++)
+            {
+                dotProduct += vectorA[i] * vectorB[i];
+                magnitudeA += vectorA[i] * vectorA[i];
+                magnitudeB += vectorB[i] * vectorB[i];
+            }
+
+            magnitudeA = Math.Sqrt(magnitudeA);
+            magnitudeB = Math.Sqrt(magnitudeB);
+
+            if (magnitudeA == 0 || magnitudeB == 0)
+                return 0;
+
+            return dotProduct / (magnitudeA * magnitudeB);
         }
     }
 }

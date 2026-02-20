@@ -32,6 +32,9 @@ namespace BlazorAuthApp.Api.Models
         [MaxLength(50)]
         public string ETagBarcode { get; set; } = string.Empty;
 
+        // Face recognition descriptor (stored as JSON)
+        public string? FaceDescriptor { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
