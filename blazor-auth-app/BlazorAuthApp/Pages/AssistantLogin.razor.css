@@ -118,6 +118,31 @@
     border: 1px solid #fecaca;
 }
 
+.error-help {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 0.5rem;
+    text-align: left;
+}
+
+.error-help strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #991b1b;
+}
+
+.error-help ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #7f1d1d;
+}
+
+.error-help li {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}
+
 .validation-message {
     color: #dc2626;
     font-size: 0.85rem;
@@ -301,6 +326,20 @@
     line-height: 1.6;
     max-width: 350px;
     margin: 0 auto;
+}
+
+.camera-permission-info {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #eff6ff;
+    border-radius: 0.5rem;
+    border: 1px solid #bfdbfe;
+}
+
+.camera-permission-info small {
+    color: #1e40af;
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 .btn-face-scan {

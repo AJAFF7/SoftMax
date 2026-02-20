@@ -20,6 +20,17 @@
         {
             <div class="alert alert-error">
                 @errorMessage
+                @if (errorMessage.Contains("camera icon") || errorMessage.Contains("allow camera"))
+                {
+                    <div class="error-help">
+                        <strong>How to enable camera:</strong>
+                        <ol>
+                            <li>Look for the camera icon (🎥 or 🔒) in your browser's address bar</li>
+                            <li>Click it and select "Allow" for camera access</li>
+                            <li>Refresh the page and try again</li>
+                        </ol>
+                    </div>
+                }
             </div>
         }
 
@@ -45,6 +56,9 @@
                     <div class="face-icon">👤</div>
                     <h3>Use Face Recognition</h3>
                     <p>Login instantly using facial recognition</p>
+                    <div class="camera-permission-info">
+                        <small>💡 You'll be asked to allow camera access</small>
+                    </div>
                 </div>
                 <button type="button" class="btn-face-scan" @onclick="StartFaceRecognition">
                      Open Camera & Scan Face

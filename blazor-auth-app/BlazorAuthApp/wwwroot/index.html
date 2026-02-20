@@ -96,12 +96,24 @@
                 // Load models first
                 const modelsLoaded = await this.loadModels();
                 if (!modelsLoaded) {
-                    dotnetHelper.invokeMethodAsync('OnFaceError', 'Failed to load face recognition models');
+                    dotnetHelper.invokeMethodAsync('OnFaceError', 'Failed to load face recognition models. Please check your internet connection.');
                     return;
                 }
 
                 try {
+                    // Check if getUserMedia is supported
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        dotnetHelper.invokeMethodAsync('OnFaceError', 'Camera not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+                        return;
+                    }
+
                     this.video = document.getElementById(videoElementId);
+                    if (!this.video) {
+                        dotnetHelper.invokeMethodAsync('OnFaceError', 'Video element not found.');
+                        return;
+                    }
+
+                    console.log('Requesting camera access...');
                     this.stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             facingMode: 'user',
@@ -111,7 +123,7 @@
                     });
                     
                     this.video.srcObject = this.stream;
-                    this.video.play();
+                    await this.video.play();
 
                     // Wait for video to be ready
                     await new Promise((resolve) => {
@@ -124,7 +136,23 @@
                     dotnetHelper.invokeMethodAsync('OnCameraReady');
                 } catch (error) {
                     console.error('Camera access error:', error);
-                    dotnetHelper.invokeMethodAsync('OnFaceError', 'Camera access denied. Please allow camera access.');
+                    let errorMessage = 'Camera access error.';
+                    
+                    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                        errorMessage = 'Camera access denied. Please click the camera icon in your browser\'s address bar and allow camera access, then try again.';
+                    } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                        errorMessage = 'No camera found. Please connect a camera and try again.';
+                    } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                        errorMessage = 'Camera is already in use by another application. Please close other apps using the camera and try again.';
+                    } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+                        errorMessage = 'Camera constraints not satisfied. Your camera may not support the required settings.';
+                    } else if (error.name === 'TypeError') {
+                        errorMessage = 'Camera access not supported. Please ensure you are using HTTPS or localhost.';
+                    } else {
+                        errorMessage = `Camera error: ${error.message || error.name || 'Unknown error'}`;
+                    }
+                    
+                    dotnetHelper.invokeMethodAsync('OnFaceError', errorMessage);
                 }
             },
 
