@@ -68,8 +68,8 @@ pipeline {
             }
         }
 
-        // Test Group 1: Tests 1-8 (Running in Parallel)
-        stage('Test Group 1: Tests 1-8') {
+        // Test Group 1: Tests 1-4 (Running in Parallel)
+        stage('Test Group 1: Tests 1-4') {
             parallel {
                 stage('Test 1: Code Quality Check') {
                     steps {
@@ -143,7 +143,12 @@ pipeline {
                         }
                     }
                 }
-                
+            }
+        }
+        
+        // Test Group 2: Tests 5-8 (Running in Parallel)
+        stage('Test Group 2: Tests 5-8') {
+            parallel {
                 stage('Test 5: Database Migration Check') {
                     steps {
                         script {
@@ -239,8 +244,8 @@ pipeline {
             }
         }
         
-        // Test Group 2: Tests 9-16 (Running in Parallel)
-        stage('Test Group 2: Tests 9-16') {
+        // Test Group 3: Tests 9-12 (Running in Parallel)
+        stage('Test Group 3: Tests 9-12') {
             parallel {
                 stage('Test 9: Blazor App Tests') {
                     steps {
@@ -347,7 +352,12 @@ pipeline {
                         }
                     }
                 }
-                
+            }
+        }
+        
+        // Test Group 4: Tests 13-16 (Running in Parallel)
+        stage('Test Group 4: Tests 13-16') {
+            parallel {
                 stage('Test 13: Data Integrity Tests') {
                     steps {
                         script {
@@ -518,34 +528,38 @@ pipeline {
             echo '1️⃣  BUILD STAGE'
             echo '    └─ Solution Compiled Successfully'
             echo ''
-            echo '2️⃣  TEST GROUP 1: Tests 1-8 (PARALLEL EXECUTION)'
+            echo '2️⃣  TEST GROUP 1: Tests 1-4 (PARALLEL EXECUTION)'
             echo '    ├─ Test 1: Code Quality Check'
             echo '    ├─ Test 2: Unit Tests'
             echo '    ├─ Test 3: Configuration Validation'
-            echo '    ├─ Test 4: Docker Image Validation'
+            echo '    └─ Test 4: Docker Image Validation'
+            echo ''
+            echo '3️⃣  TEST GROUP 2: Tests 5-8 (PARALLEL EXECUTION)'
             echo '    ├─ Test 5: Database Migration Check'
             echo '    ├─ Test 6: Security Check'
             echo '    ├─ Test 7: File Structure Validation'
             echo '    └─ Test 8: API Endpoint Tests'
             echo ''
-            echo '3️⃣  TEST GROUP 2: Tests 9-16 (PARALLEL EXECUTION)'
+            echo '4️⃣  TEST GROUP 3: Tests 9-12 (PARALLEL EXECUTION)'
             echo '    ├─ Test 9: Blazor App Tests'
             echo '    ├─ Test 10: Database Tests'
             echo '    ├─ Test 11: Performance Tests'
-            echo '    ├─ Test 12: Container Health Tests'
+            echo '    └─ Test 12: Container Health Tests'
+            echo ''
+            echo '5️⃣  TEST GROUP 4: Tests 13-16 (PARALLEL EXECUTION)'
             echo '    ├─ Test 13: Data Integrity Tests'
             echo '    ├─ Test 14: Integration Test'
             echo '    ├─ Test 15: Logging & Monitoring'
             echo '    └─ Test 16: Environment Variables'
             echo ''
-            echo '4️⃣  DEPLOYMENT STAGES (SEQUENTIAL)'
+            echo '6️⃣  DEPLOYMENT STAGES (SEQUENTIAL)'
             echo '    ├─ Publish Application'
             echo '    ├─ Docker Build'
             echo '    └─ Docker Deploy'
             echo ''
             echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
-            echo '📈 TOTAL: 2 Test Groups | 16 Tests | 52 Sub-Tests = 68 Tests'
-            echo '⚡ Tests organized in TWO parallel groups (8 tests each)!'
+            echo '📈 TOTAL: 4 Test Groups | 16 Tests | 52 Sub-Tests = 68 Tests'
+            echo '⚡ Tests organized in FOUR parallel groups (4 tests each)!'
             echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
             echo ''
             echo '🚀 SoftMax Portal is now running!'
@@ -565,19 +579,19 @@ pipeline {
             echo ''
             echo '🔍 Check which stage failed:'
             echo '   - Build Stage'
-            echo '   - Test Group 1 (Tests 1-8)'
-            echo '   - Test Group 2 (Tests 9-16)'
+            echo '   - Test Group 1 (Tests 1-4)'
+            echo '   - Test Group 2 (Tests 5-8)'
+            echo '   - Test Group 3 (Tests 9-12)'
+            echo '   - Test Group 4 (Tests 13-16)'
             echo '   - Publish Stage'
             echo '   - Docker Build Stage'
             echo '   - Docker Deploy Stage'
             echo ''
-            echo '📋 Individual tests in Group 1:'
-            echo '   Test 1-8: Code Quality, Unit Tests, Configuration, Docker,'
-            echo '            Migrations, Security, File Structure, API Endpoints'
-            echo ''
-            echo '📋 Individual tests in Group 2:'
-            echo '   Test 9-16: Blazor App, Database, Performance, Health,'
-            echo '             Data Integrity, Integration, Logging, Environment'
+            echo '📋 Individual tests per group:'
+            echo '   Group 1 (Tests 1-4): Code Quality, Unit Tests, Configuration, Docker'
+            echo '   Group 2 (Tests 5-8): Migrations, Security, File Structure, API Endpoints'
+            echo '   Group 3 (Tests 9-12): Blazor App, Database, Performance, Health'
+            echo '   Group 4 (Tests 13-16): Data Integrity, Integration, Logging, Environment'
             echo ''
             echo '💡 Common issues:'
             echo '   - Docker services not starting'
