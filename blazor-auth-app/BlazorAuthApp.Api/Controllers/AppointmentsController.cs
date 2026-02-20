@@ -37,6 +37,10 @@ public class AppointmentsController : ControllerBase
                 PatientPhone = a.PatientPhone,
                 Symptoms = a.Symptoms,
                 Status = a.Status,
+                PatientArrived = a.PatientArrived,
+                PatientArrivedAt = a.PatientArrivedAt,
+                IsFinished = a.IsFinished,
+                FinishedAt = a.FinishedAt,
                 CreatedAt = a.CreatedAt,
                 Doctor = new DoctorDto
                 {
@@ -64,6 +68,7 @@ public class AppointmentsController : ControllerBase
     {
         var appointments = await _context.Appointments
             .Include(a => a.Doctor)
+            .Include(a => a.CheckedInByAssistant)
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.AppointmentDate)
             .Select(a => new AppointmentDto
@@ -78,7 +83,14 @@ public class AppointmentsController : ControllerBase
                 PatientPhone = a.PatientPhone,
                 Symptoms = a.Symptoms,
                 Status = a.Status,
+                PatientArrived = a.PatientArrived,
+                PatientArrivedAt = a.PatientArrivedAt,
+                IsFinished = a.IsFinished,
+                FinishedAt = a.FinishedAt,
                 CreatedAt = a.CreatedAt,
+                CheckedInByAssistantId = a.CheckedInByAssistantId,
+                CheckedInByAssistantName = a.CheckedInByAssistant != null ? a.CheckedInByAssistant.FullName : null,
+                CheckedInByAssistantBarcode = a.CheckedInByAssistant != null ? a.CheckedInByAssistant.ETagBarcode : null,
                 Doctor = new DoctorDto
                 {
                     Id = a.Doctor.Id,
@@ -105,6 +117,7 @@ public class AppointmentsController : ControllerBase
     {
         var appointment = await _context.Appointments
             .Include(a => a.Doctor)
+            .Include(a => a.CheckedInByAssistant)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (appointment == null)
@@ -124,7 +137,14 @@ public class AppointmentsController : ControllerBase
             PatientPhone = appointment.PatientPhone,
             Symptoms = appointment.Symptoms,
             Status = appointment.Status,
+            PatientArrived = appointment.PatientArrived,
+            PatientArrivedAt = appointment.PatientArrivedAt,
+            IsFinished = appointment.IsFinished,
+            FinishedAt = appointment.FinishedAt,
             CreatedAt = appointment.CreatedAt,
+            CheckedInByAssistantId = appointment.CheckedInByAssistantId,
+            CheckedInByAssistantName = appointment.CheckedInByAssistant?.FullName,
+            CheckedInByAssistantBarcode = appointment.CheckedInByAssistant?.ETagBarcode,
             Doctor = new DoctorDto
             {
                 Id = appointment.Doctor.Id,
@@ -164,10 +184,15 @@ public class AppointmentsController : ControllerBase
             return BadRequest(new { message = "Doctor not found" });
         }
 
+        // Convert appointment date to UTC
+        var appointmentDateUtc = createDto.AppointmentDate.Kind == DateTimeKind.Utc 
+            ? createDto.AppointmentDate 
+            : DateTime.SpecifyKind(createDto.AppointmentDate, DateTimeKind.Utc);
+
         // Check if the time slot is already taken
         var existingAppointment = await _context.Appointments
             .AnyAsync(a => a.DoctorId == createDto.DoctorId 
-                && a.AppointmentDate.Date == createDto.AppointmentDate.Date 
+                && a.AppointmentDate.Date == appointmentDateUtc.Date 
                 && a.TimeSlot == createDto.TimeSlot
                 && a.Status != "Cancelled");
 
@@ -180,13 +205,14 @@ public class AppointmentsController : ControllerBase
         {
             UserId = user.Id,
             DoctorId = createDto.DoctorId,
-            AppointmentDate = createDto.AppointmentDate,
+            AppointmentDate = appointmentDateUtc,
             TimeSlot = createDto.TimeSlot,
             PatientName = createDto.PatientName,
             PatientEmail = createDto.PatientEmail,
             PatientPhone = createDto.PatientPhone,
             Symptoms = createDto.Symptoms,
-            Status = "Pending"
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Appointments.Add(appointment);
@@ -207,6 +233,10 @@ public class AppointmentsController : ControllerBase
             PatientPhone = appointment.PatientPhone,
             Symptoms = appointment.Symptoms,
             Status = appointment.Status,
+            PatientArrived = appointment.PatientArrived,
+            PatientArrivedAt = appointment.PatientArrivedAt,
+            IsFinished = appointment.IsFinished,
+            FinishedAt = appointment.FinishedAt,
             CreatedAt = appointment.CreatedAt,
             Doctor = new DoctorDto
             {
@@ -264,5 +294,61 @@ public class AppointmentsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Appointment cancelled successfully" });
+    }
+
+    // PUT: api/appointments/{id}/check-in
+    [HttpPut("{id}/check-in")]
+    public async Task<IActionResult> CheckInPatient(int id, [FromBody] CheckInDto checkInDto)
+    {
+        var appointment = await _context.Appointments.FindAsync(id);
+
+        if (appointment == null)
+        {
+            return NotFound(new { message = "Appointment not found" });
+        }
+
+        // Verify assistant exists
+        var assistant = await _context.Assistants.FindAsync(checkInDto.AssistantId);
+        if (assistant == null || !assistant.IsActive)
+        {
+            return BadRequest(new { message = "Invalid or inactive assistant" });
+        }
+
+        appointment.PatientArrived = true;
+        appointment.PatientArrivedAt = DateTime.UtcNow;
+        appointment.CheckedInByAssistantId = checkInDto.AssistantId;
+        appointment.Status = "Confirmed";
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { 
+            message = "Patient checked in successfully", 
+            patientArrived = true, 
+            patientArrivedAt = appointment.PatientArrivedAt,
+            checkedInBy = assistant.FullName,
+            assistantBarcode = assistant.ETagBarcode
+        });
+    }
+
+    // PUT: api/appointments/{id}/finish
+    [HttpPut("{id}/finish")]
+    public async Task<IActionResult> FinishAppointment(int id)
+    {
+        var appointment = await _context.Appointments.FindAsync(id);
+
+        if (appointment == null)
+        {
+            return NotFound(new { message = "Appointment not found" });
+        }
+
+        appointment.IsFinished = true;
+        appointment.FinishedAt = DateTime.UtcNow;
+        appointment.Status = "Completed";
+        appointment.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Appointment marked as finished", isFinished = true, finishedAt = appointment.FinishedAt });
     }
 }

@@ -1,0 +1,67 @@
+@page "/debug-auth"
+@using BlazorAuthApp.Services
+@inject AuthService AuthService
+@inject LocalStorageService LocalStorage
+
+<PageTitle>Debug Auth</PageTitle>
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body">
+            <h3>Authentication Debug Info</h3>
+            
+            <div class="mt-3">
+                <h5>Current User Status:</h5>
+                @if (AuthService.CurrentUser != null)
+                {
+                    <div class="alert alert-success">
+                        <p><strong>Logged In:</strong> Yes</p>
+                        <p><strong>User ID:</strong> @AuthService.CurrentUser.Id</p>
+                        <p><strong>Username:</strong> @AuthService.CurrentUser.Username</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        <p><strong>Logged In:</strong> No</p>
+                    </div>
+                }
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-danger" @onclick="ClearLocalStorage">
+                    Clear All localStorage & Logout
+                </button>
+                <button class="btn btn-info ms-2" @onclick="Refresh">
+                    Refresh Status
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info mt-3">
+                    @message
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string message = "";
+
+    private async Task ClearLocalStorage()
+    {
+        await LocalStorage.RemoveItemAsync("currentUser");
+        await LocalStorage.RemoveItemAsync("users");
+        await AuthService.LogoutAsync();
+        message = "LocalStorage cleared! Please login again.";
+        StateHasChanged();
+    }
+
+    private void Refresh()
+    {
+        message = "Status refreshed at " + DateTime.Now.ToString("HH:mm:ss");
+        StateHasChanged();
+    }
+}

@@ -140,3 +140,35 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Time Left Indicator - Global Styles */
+.time-left-indicator {
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    color: #22c55e !important;
+    background: #ffffff !important;
+    padding: 0.625rem 1.25rem !important;
+    border-radius: 0.625rem !important;
+    border: 3px solid #22c55e !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    white-space: nowrap !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4) !important;
+    animation: pulse-green 2s ease-in-out infinite !important;
+}
+
+@keyframes pulse-green {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+    }
+}
+
+.time-left-indicator.expired {
+    color: #ef4444 !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+}

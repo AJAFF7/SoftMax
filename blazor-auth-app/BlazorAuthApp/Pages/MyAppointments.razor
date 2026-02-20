@@ -2,8 +2,10 @@
 @using BlazorAuthApp.Models
 @using BlazorAuthApp.Services
 @inject AppointmentService AppointmentService
+@inject AssistantService AssistantService
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@implements IDisposable
 
 <PageTitle>My Appointments</PageTitle>
 
@@ -71,7 +73,15 @@
                             <div class="calendar-appointments">
                                 @foreach (var apt in dayAppointments.Take(2))
                                 {
-                                    <div class="calendar-appointment @GetStatusClass(apt.Status)" @onclick="() => SelectAppointment(apt)">
+                                    <div class="calendar-appointment @GetStatusClass(apt.Status) @(apt.IsFinished ? "appointment-finished" : apt.PatientArrived ? "appointment-checked-in" : "")" @onclick="() => SelectAppointment(apt)">
+                                        @if (apt.IsFinished)
+                                        {
+                                            <span class="calendar-status-icon finished">✓✓</span>
+                                        }
+                                        else if (apt.PatientArrived)
+                                        {
+                                            <span class="calendar-status-icon checked-in">✓</span>
+                                        }
                                         <div class="apt-time">@apt.TimeSlot</div>
                                         <div class="apt-doctor">Dr. @apt.Doctor?.LastName</div>
                                     </div>
@@ -105,7 +115,7 @@
         <div class="appointments-list">
             @foreach (var appointment in FilteredAppointments)
             {
-                <div class="appointment-card @GetStatusClass(appointment.Status)">
+                <div class="appointment-card @GetStatusClass(appointment.Status) @(appointment.IsFinished ? "appointment-finished" : appointment.PatientArrived ? "appointment-checked-in" : "")">
                     <div class="appointment-header">
                         <div class="doctor-info">
                             @if (appointment.Doctor != null)
@@ -156,14 +166,89 @@
                         }
                     </div>
 
+                    <!-- Cancellation Period Info -->
                     @if (appointment.Status != "Cancelled" && appointment.Status != "Completed")
                     {
-                        <div class="appointment-actions">
-                            <button class="btn-cancel" @onclick="() => CancelAppointment(appointment.Id)">
-                                Cancel Appointment
-                            </button>
+                        var cancellationInfo = GetCancellationInfo(appointment);
+                        <div class="cancellation-info-box @(cancellationInfo.CanCancel ? "can-cancel" : "cannot-cancel")">
+                            <div class="cancellation-icon">
+                                @if (cancellationInfo.CanCancel)
+                                {
+                                    <span>✓</span>
+                                }
+                                else
+                                {
+                                    <span>⏰</span>
+                                }
+                            </div>
+                            <div class="cancellation-text">
+                                @if (cancellationInfo.CanCancel)
+                                {
+                                    <strong>Cancellation Allowed</strong>
+                                    <p>You can cancel until @cancellationInfo.DeadlineText</p>
+                                    <p class="time-remaining">Time remaining: @cancellationInfo.TimeRemaining</p>
+                                }
+                                else
+                                {
+                                    <strong>Cancellation Window Closed</strong>
+                                    <p>@cancellationInfo.Message</p>
+                                }
+                            </div>
                         </div>
                     }
+
+                    <div class="appointment-actions">
+                        @if (appointment.PatientArrived)
+                        {
+                            <div class="checked-in-info">
+                                <span class="checked-in-badge">
+                                    ✓ Checked In @appointment.PatientArrivedAt?.ToString("HH:mm")
+                                </span>
+                                @if (!string.IsNullOrEmpty(appointment.CheckedInByAssistantName))
+                                {
+                                    <span class="assistant-info">
+                                        by @appointment.CheckedInByAssistantName
+                                        @if (!string.IsNullOrEmpty(appointment.CheckedInByAssistantBarcode))
+                                        {
+                                            <span class="assistant-barcode">(@appointment.CheckedInByAssistantBarcode)</span>
+                                        }
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        @if (appointment.IsFinished)
+                        {
+                            <span class="finished-badge">✓ Appointment Completed @appointment.FinishedAt?.ToString("MMM dd, HH:mm")</span>
+                        }
+                        
+                        @if (appointment.Status != "Cancelled" && appointment.Status != "Completed")
+                        {
+                            var cancellationInfo = GetCancellationInfo(appointment);
+                            <div class="cancel-button-container">
+                                <button class="btn-cancel" 
+                                        @onclick="() => CancelAppointment(appointment.Id)"
+                                        disabled="@(!cancellationInfo.CanCancel)">
+                                    @if (cancellationInfo.CanCancel)
+                                    {
+                                        <span>Cancel Appointment</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Cannot Cancel</span>
+                                    }
+                                </button>
+                                @if (cancellationInfo.CanCancel)
+                                {
+                                    <span class="time-left-indicator" style="color: #22c55e !important; font-weight: 800 !important; background: white !important; border: 3px solid #22c55e !important; padding: 0.625rem 1.25rem !important; border-radius: 0.625rem !important; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4) !important; margin-left: 2rem !important;">⏱️ @cancellationInfo.TimeRemaining left</span>
+                                }
+                                else if (appointment.Status != "Cancelled" && appointment.Status != "Completed")
+                                {
+                                    <span class="time-left-indicator expired" style="color: #ef4444 !important; font-weight: 800 !important; background: white !important; border: 3px solid #ef4444 !important; padding: 0.625rem 1.25rem !important; border-radius: 0.625rem !important; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important; margin-left: 2rem !important;">⛔ Deadline passed</span>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             }
         </div>
@@ -176,6 +261,8 @@
     private string selectedTab = "all";
     private DateTime currentDate = DateTime.Today;
     private Appointment? selectedAppointment = null;
+    private Timer? countdownTimer;
+    private DateTime currentTime = DateTime.Now;
 
     private IEnumerable<Appointment> FilteredAppointments
     {
@@ -255,6 +342,18 @@
         }
 
         await LoadAppointments();
+        
+        // Start real-time countdown timer
+        countdownTimer = new Timer(async _ =>
+        {
+            currentTime = DateTime.Now;
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose()
+    {
+        countdownTimer?.Dispose();
     }
 
     private async Task LoadAppointments()
@@ -264,14 +363,90 @@
         isLoading = false;
     }
 
+    private CancellationInfo GetCancellationInfo(Appointment appointment)
+    {
+        const int CANCELLATION_HOURS = 6; // 6 hours before appointment
+        
+        var appointmentDateTime = appointment.AppointmentDate;
+        
+        // Parse time from TimeSlot (e.g., "09:00 AM", "02:00 PM")
+        if (DateTime.TryParse(appointment.TimeSlot, out var parsedTime))
+        {
+            appointmentDateTime = appointment.AppointmentDate.Date.Add(parsedTime.TimeOfDay);
+        }
+        else
+        {
+            // If parsing fails, log and assume end of day to be safe
+            Console.WriteLine($"Failed to parse time slot: {appointment.TimeSlot}");
+            appointmentDateTime = appointment.AppointmentDate.Date.AddHours(23).AddMinutes(59);
+        }
+        
+        var cancellationDeadline = appointmentDateTime.AddHours(-CANCELLATION_HOURS);
+        var now = currentTime; // Use the timer-updated current time
+        var canCancel = now < cancellationDeadline;
+        
+        var timeRemaining = cancellationDeadline - now;
+        string timeRemainingText = "";
+        
+        if (canCancel)
+        {
+            int days = (int)timeRemaining.TotalDays;
+            int hours = timeRemaining.Hours;
+            int minutes = timeRemaining.Minutes;
+            int seconds = timeRemaining.Seconds;
+            
+            if (days > 0)
+            {
+                timeRemainingText = $"{days}d {hours}h {minutes}m {seconds}s";
+            }
+            else if (hours > 0)
+            {
+                timeRemainingText = $"{hours}h {minutes}m {seconds}s";
+            }
+            else if (minutes > 0)
+            {
+                timeRemainingText = $"{minutes}m {seconds}s";
+            }
+            else
+            {
+                timeRemainingText = $"{seconds}s";
+            }
+        }
+        
+        return new CancellationInfo
+        {
+            CanCancel = canCancel,
+            DeadlineText = cancellationDeadline.ToString("MMM dd, yyyy hh:mm tt"),
+            TimeRemaining = timeRemainingText,
+            Message = canCancel 
+                ? $"You can cancel until {CANCELLATION_HOURS} hours before your appointment."
+                : $"Cancellation period ended. Deadline was {CANCELLATION_HOURS} hours before appointment."
+        };
+    }
+
     private async Task CancelAppointment(int appointmentId)
     {
-        if (confirm("Are you sure you want to cancel this appointment?"))
+        var appointment = appointments.FirstOrDefault(a => a.Id == appointmentId);
+        if (appointment == null) return;
+        
+        var cancellationInfo = GetCancellationInfo(appointment);
+        if (!cancellationInfo.CanCancel)
+        {
+            Console.WriteLine("Cannot cancel: Cancellation period has ended.");
+            return;
+        }
+        
+        if (confirm($"Are you sure you want to cancel this appointment?\n\nDoctor: Dr. {appointment.Doctor?.FullName}\nDate: {appointment.AppointmentDate:MMM dd, yyyy}\nTime: {appointment.TimeSlot}"))
         {
             var success = await AppointmentService.CancelAppointmentAsync(appointmentId);
             if (success)
             {
+                Console.WriteLine("Appointment cancelled successfully.");
                 await LoadAppointments();
+            }
+            else
+            {
+                Console.WriteLine("Failed to cancel appointment.");
             }
         }
     }
@@ -280,6 +455,14 @@
     {
         // In a real app, use a modal dialog
         return true;
+    }
+
+    private class CancellationInfo
+    {
+        public bool CanCancel { get; set; }
+        public string DeadlineText { get; set; } = "";
+        public string TimeRemaining { get; set; } = "";
+        public string Message { get; set; } = "";
     }
 
     private string GetStatusClass(string status)

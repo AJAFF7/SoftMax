@@ -1,86 +1,327 @@
-# Blazor WebAssembly Authentication App
+# 🏥 SoftMax Portal
 
-A simple Blazor WebAssembly application with user registration, login, and account management features.
+A modern healthcare appointment management system built with Blazor WebAssembly, ASP.NET Core, and PostgreSQL.
 
-## Features
+## ✨ Features
 
-- **User Registration**: Create a new account with username and password
-- **User Login**: Sign in with existing credentials
-- **Home Page**: Simple landing page with links to Login and Register
-- **Dashboard Page** (after login):
-  - Displays welcome message with username
-  - Quick access links to Home, Weather, and Counter pages
-  - Delete User button - removes the current user account
-  - Logout button - signs out the current user
-- **Login/Register Pages**: Include quick links to Weather and Counter
-- **Local Storage**: User data is persisted in browser's localStorage
+### For Patients
+- 👤 User Registration & Login
+- 📅 Book Appointments with Doctors
+- 👁️ View Appointment History
+- ❌ Cancel Appointments
+- 📊 Dashboard with Appointment Statistics
 
-## Project Structure
+### For Assistants (Staff)
+- 🔐 QR Code-based Authentication
+- 📋 View All Appointments
+- ✅ Check-in Patients
+- ✓ Complete Appointments
+- 🔍 Search & Filter Appointments
+- 📊 Real-time Statistics Dashboard
 
-```
-BlazorAuthApp/
-├── Models/
-│   └── User.cs                 # User model
-├── Services/
-│   ├── AuthService.cs          # Authentication service
-│   └── LocalStorageService.cs  # Local storage wrapper
-├── Pages/
-│   ├── Home.razor             # Landing page
-│   ├── Dashboard.razor        # Main dashboard with navigation
-│   ├── Login.razor            # Login page
-│   ├── Register.razor         # Registration page
-│   ├── Counter.razor          # Counter demo page
-│   └── Weather.razor          # Weather demo page
-└── Program.cs                 # Service configuration
-```
+### System Features
+- 🐳 Fully Dockerized
+- 🔒 JWT Authentication
+- 🗄️ PostgreSQL Database
+- 🌊 Modern Ocean Blue UI Theme
+- 📱 Responsive Design
+- 🚀 Blazor WebAssembly (Client-side)
+- 🔌 RESTful API
 
-## How to Run
+## 🛠️ Tech Stack
 
-1. Navigate to the BlazorAuthApp directory:
+- **Frontend**: Blazor WebAssembly (.NET 10.0 Preview)
+- **Backend**: ASP.NET Core Web API (.NET 10.0 Preview)
+- **Database**: PostgreSQL 17
+- **ORM**: Entity Framework Core
+- **Authentication**: JWT Tokens
+- **Containerization**: Docker & Docker Compose
+- **Web Server**: Nginx (for Blazor app)
+- **QR Codes**: QRCoder Library
+
+## 📋 Prerequisites
+
+- Docker & Docker Compose
+- .NET 10.0 SDK (for local development)
+- Git
+
+## 🚀 Quick Start
+
+### Using Docker (Recommended)
+
+1. **Clone the repository**
    ```bash
-   cd BlazorAuthApp
+   git clone <your-repo-url>
+   cd blazor-auth-app
    ```
 
-2. Run the application:
+2. **Start the application**
    ```bash
+   docker-compose up -d
+   ```
+
+3. **Access the application**
+   - Blazor App: http://localhost:80
+   - API: http://localhost:8080/api
+   - PostgreSQL: localhost:5432
+
+4. **Create SoftMax Assistant Account**
+   ```bash
+   chmod +x register-softmax.sh
+   ./register-softmax.sh
+   ```
+
+### Local Development
+
+1. **Install .NET 10.0 SDK**
+   ```bash
+   # Download from: https://dotnet.microsoft.com/download/dotnet/10.0
+   ```
+
+2. **Setup PostgreSQL**
+   ```bash
+   # Using Docker
+   docker run -d \
+     --name postgres \
+     -e POSTGRES_PASSWORD=postgres \
+     -e POSTGRES_DB=blazorauthdb \
+     -p 5432:5432 \
+     postgres:17-alpine
+   ```
+
+3. **Run Migrations**
+   ```bash
+   cd BlazorAuthApp.Api
+   dotnet ef database update
+   ```
+
+4. **Start API**
+   ```bash
+   cd BlazorAuthApp.Api
    dotnet run
    ```
 
-3. Open your browser and navigate to the URL shown in the terminal (typically `https://localhost:5001` or `http://localhost:5000`)
+5. **Start Blazor App**
+   ```bash
+   cd BlazorAuthApp
+   dotnet run
+   ```
 
-## Usage Flow
+## 📁 Project Structure
 
-1. **Home Page** (`/`): Simple landing page with Login and Register buttons
+```
+blazor-auth-app/
+├── BlazorAuthApp/              # Blazor WebAssembly Frontend
+│   ├── Pages/                  # Razor Pages/Components
+│   ├── Services/               # API Service Layer
+│   ├── Models/                 # Client-side Models
+│   ├── wwwroot/                # Static Files
+│   └── nginx.conf              # Nginx Configuration
+│
+├── BlazorAuthApp.Api/          # ASP.NET Core API Backend
+│   ├── Controllers/            # API Controllers
+│   ├── Models/                 # Database Models
+│   ├── DTOs/                   # Data Transfer Objects
+│   ├── Data/                   # DbContext & Migrations
+│   ├── Migrations/             # EF Core Migrations
+│   └── docker-entrypoint.sh    # Docker Startup Script
+│
+├── docker-compose.yml          # Docker Compose Configuration
+├── register-softmax.sh         # Create SoftMax Assistant
+└── README.md                   # This file
+```
 
-2. **Register** (`/register`): Create a new account
-   - After successful registration, you'll be redirected to the Dashboard
-   - Quick links to Counter and Weather pages available
+## 🔑 Default Credentials
 
-3. **Login** (`/login`): Sign in with your credentials
-   - After successful login, you'll be redirected to the Dashboard
-   - Quick links to Counter and Weather pages available
+### Patient Account
+Create your own via registration at `/register`
 
-4. **Dashboard** (`/dashboard`): Main hub after authentication
-   - Welcome message with your username
-   - Quick access buttons to:
-     - **Home** - Return to landing page
-     - **Weather** - View weather forecasts
-     - **Counter** - Interactive counter page
-   - **Delete User** button - removes your account and redirects to registration
-   - **Logout** button - signs you out and redirects to login
+### SoftMax Assistant
+- **Username**: `softmax`
+- **Password**: `SoftMax123!`
+- **Login**: QR Code or credentials at `/assistant-login`
 
-## Technical Details
+## 🐳 Docker Architecture
 
-- **Framework**: Blazor WebAssembly (.NET 10.0)
-- **Authentication**: Client-side authentication using localStorage
-- **State Management**: Service-based with event notifications
-- **UI**: Bootstrap 5 for styling
+```
+┌─────────────────┐
+│   Nginx (80)    │  ← Blazor WebAssembly
+│   + API Proxy   │     /api → blazor-api:8080
+└────────┬────────┘
+         │
+    ┌────┴────────────────┐
+    │                     │
+┌───▼──────┐      ┌──────▼─────┐
+│   API    │      │ PostgreSQL │
+│  (8080)  │◄────►│   (5432)   │
+└──────────┘      └────────────┘
+```
 
-## Security Note
+## 🔧 Configuration
 
-This is a demo application. In a production environment, you should:
-- Use server-side authentication
-- Implement proper password hashing
-- Use secure HTTP-only cookies
-- Add input validation and sanitization
-- Implement HTTPS
+### Environment Variables
+
+Edit `docker-compose.yml` to configure:
+
+```yaml
+POSTGRES_PASSWORD: postgres
+POSTGRES_DB: blazorauthdb
+ConnectionStrings__DefaultConnection: "Host=postgres;Database=blazorauthdb;Username=postgres;Password=postgres"
+```
+
+### API Base URL
+
+For public access, update:
+- `BlazorAuthApp/wwwroot/appsettings.json`
+- Change `ApiBaseUrl` to your domain
+
+### Cloudflare Tunnel (Optional)
+
+Configure in Cloudflare dashboard:
+- Service type: HTTP
+- URL: http://localhost:80
+
+## 📊 Database Schema
+
+### Main Tables
+- **Users** - Patient accounts
+- **Doctors** - Healthcare providers
+- **Appointments** - Booking records
+- **Assistants** - Staff accounts with QR codes
+
+### Key Features
+- Patient check-in tracking
+- Appointment status workflow
+- QR code authentication
+- Session management
+
+## 🎨 UI Theme
+
+- **Color Scheme**: Ocean Blue Gradient
+- **Primary**: #006994 → #00b4d8 → #90e0ef
+- **Status Colors**:
+  - Pending: Orange (#f59e0b)
+  - Confirmed: Green (#10b981)
+  - Completed: Purple (#8b5cf6)
+  - Cancelled: Red (#ef4444)
+
+## 🔒 Security
+
+- JWT-based authentication
+- Password hashing with BCrypt
+- CORS configuration
+- Admin-only assistant creation
+- Secure QR code generation
+
+## 📝 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+
+### Appointments
+- `GET /api/appointments` - Get all appointments
+- `GET /api/appointments/user/{userId}` - User appointments
+- `POST /api/appointments` - Create appointment
+- `PUT /api/appointments/{id}/cancel` - Cancel appointment
+- `PUT /api/appointments/{id}/status` - Update status
+
+### Doctors
+- `GET /api/doctors` - List all doctors
+
+### Assistants
+- `POST /api/assistants/register` - Create assistant (admin)
+- `POST /api/assistants/login` - Assistant login
+- `POST /api/assistants/login/barcode` - QR code login
+- `GET /api/assistants/qrcode/{email}` - Generate QR code
+
+## 🛠️ Development Scripts
+
+| Script | Description |
+|--------|-------------|
+| `start-docker.sh` | Start all Docker services |
+| `stop-docker.sh` | Stop all Docker services |
+| `restart.sh` | Restart Docker services |
+| `register-softmax.sh` | Create SoftMax assistant |
+| `logs-docker.sh` | View Docker logs |
+
+## 🚀 Deployment
+
+### Production Checklist
+- [ ] Update connection strings
+- [ ] Configure HTTPS/SSL
+- [ ] Set up Cloudflare Tunnel or reverse proxy
+- [ ] Change default passwords
+- [ ] Enable CORS for your domain
+- [ ] Set up automated backups
+- [ ] Configure monitoring
+
+### Docker Compose Production
+```bash
+docker-compose -f docker-compose.yml up -d
+```
+
+## 🐛 Troubleshooting
+
+### API not responding
+```bash
+docker-compose logs api
+docker-compose restart api
+```
+
+### Database connection issues
+```bash
+docker-compose logs postgres
+docker-compose exec postgres psql -U postgres -d blazorauthdb
+```
+
+### Blazor app not loading
+```bash
+docker-compose logs blazor-app
+# Hard refresh browser: Ctrl+Shift+R
+```
+
+### Migration issues
+```bash
+docker-compose exec api dotnet ef migrations list
+docker-compose exec api dotnet ef database update
+```
+
+## 📚 Documentation
+
+- [Docker Setup Guide](DOCKER_SETUP.md)
+- [Docker Quick Start](DOCKER_QUICKSTART.md)
+- [Docker Deployment](DOCKER_DEPLOYMENT.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👥 Support
+
+For issues and questions:
+1. Check the troubleshooting section
+2. Review Docker logs: `docker-compose logs`
+3. Open an issue on GitHub
+
+## 🎯 Roadmap
+
+- [ ] Add unit tests
+- [ ] Implement email notifications
+- [ ] Add appointment reminders
+- [ ] Multi-language support
+- [ ] Mobile app (MAUI)
+- [ ] Advanced reporting
+- [ ] Integration with calendar systems
+
+---
+
+**Built with ❤️ using Blazor WebAssembly and .NET 10.0**

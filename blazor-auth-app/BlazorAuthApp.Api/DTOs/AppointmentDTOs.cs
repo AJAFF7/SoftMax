@@ -31,7 +31,14 @@ public class AppointmentDto
     public string PatientPhone { get; set; } = string.Empty;
     public string Symptoms { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public bool PatientArrived { get; set; }
+    public DateTime? PatientArrivedAt { get; set; }
+    public bool IsFinished { get; set; }
+    public DateTime? FinishedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public int? CheckedInByAssistantId { get; set; }
+    public string? CheckedInByAssistantName { get; set; }
+    public string? CheckedInByAssistantBarcode { get; set; }
     
     // Include doctor information
     public DoctorDto? Doctor { get; set; }
@@ -70,4 +77,10 @@ public class UpdateAppointmentStatusDto
 {
     [Required]
     public string Status { get; set; } = string.Empty;
+}
+
+public class CheckInDto
+{
+    [Required]
+    public int AssistantId { get; set; }
 }

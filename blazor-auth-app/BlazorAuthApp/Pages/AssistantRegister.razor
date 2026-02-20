@@ -1,0 +1,57 @@
+@page "/assistant-register"
+@inject NavigationManager NavigationManager
+
+<PageTitle>SoftMax Portal - Access Restricted</PageTitle>
+
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h2>🔒 Access Restricted</h2>
+            <p>SoftMax Assistant Portal</p>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">🏢</div>
+            <h3>Admin-Only Access</h3>
+            <div class="info-content">
+                <p><strong>SoftMax Assistants can only be created by portal administrators.</strong></p>
+                
+                <div class="info-section">
+                    <h4>📋 How to Get Access:</h4>
+                    <ul>
+                        <li>Contact your SoftMax portal administrator</li>
+                        <li>Request assistant account creation</li>
+                        <li>Receive your unique QR code and credentials</li>
+                        <li>Use the QR code or credentials to login</li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h4>🔐 Security Note:</h4>
+                    <p>For security reasons, assistant accounts are created exclusively by authorized administrators. Each assistant receives a unique barcode/QR code for secure access.</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" @onclick="GoToLogin">
+                        <span>🔑</span> Go to Assistant Login
+                    </button>
+                    <button class="btn-secondary" @onclick="GoToHome">
+                        <span>🏠</span> Back to Home
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/assistant-login");
+    }
+
+    private void GoToHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

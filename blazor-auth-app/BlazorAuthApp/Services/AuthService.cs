@@ -1,21 +1,26 @@
 using BlazorAuthApp.Models;
+using BlazorAuthApp.DTOs;
+using System.Net.Http.Json;
 
 namespace BlazorAuthApp.Services;
 
 public class AuthService
 {
-    private const string USERS_KEY = "users";
     private const string CURRENT_USER_KEY = "currentUser";
+    private readonly string ApiUrl;
     
     private readonly LocalStorageService _localStorage;
+    private readonly HttpClient _http;
     
     public User? CurrentUser { get; private set; }
     
     public event Action? OnAuthStateChanged;
 
-    public AuthService(LocalStorageService localStorage)
+    public AuthService(LocalStorageService localStorage, HttpClient http, ApiConfiguration config)
     {
         _localStorage = localStorage;
+        _http = http;
+        ApiUrl = config.BaseUrl;
     }
 
     public async Task InitializeAsync()
@@ -28,38 +33,75 @@ public class AuthService
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             return false;
 
-        var users = await GetUsersAsync();
-        
-        if (users.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
-            return false;
+        try
+        {
+            var request = new RegisterRequest
+            {
+                Username = username,
+                Password = password
+            };
 
-        // Generate a new ID (simple incrementing based on existing users)
-        int newId = users.Any() ? users.Max(u => u.Id) + 1 : 1;
-        
-        var newUser = new User { Id = newId, Username = username, Password = password };
-        users.Add(newUser);
-        await SaveUsersAsync(users);
-        
-        await LoginAsync(username, password);
-        return true;
+            var response = await _http.PostAsJsonAsync($"{ApiUrl}/auth/register", request);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+
+            if (authResponse?.Success == true && authResponse.User != null)
+            {
+                CurrentUser = new User
+                {
+                    Id = authResponse.User.Id,
+                    Username = authResponse.User.Username
+                };
+                await SaveCurrentUserAsync(CurrentUser);
+                OnAuthStateChanged?.Invoke();
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Registration error: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<bool> LoginAsync(string username, string password)
     {
-        var users = await GetUsersAsync();
-        var user = users.FirstOrDefault(u => 
-            u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && 
-            u.Password == password);
-
-        if (user != null)
+        try
         {
-            CurrentUser = user;
-            await SaveCurrentUserAsync(user);
-            OnAuthStateChanged?.Invoke();
-            return true;
-        }
+            var request = new LoginRequest
+            {
+                Username = username,
+                Password = password
+            };
 
-        return false;
+            Console.WriteLine($"Attempting login for user: {username}");
+            var response = await _http.PostAsJsonAsync($"{ApiUrl}/auth/login", request);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+
+            Console.WriteLine($"Login response - Success: {authResponse?.Success}, User: {authResponse?.User?.Username}");
+
+            if (authResponse?.Success == true && authResponse.User != null)
+            {
+                CurrentUser = new User
+                {
+                    Id = authResponse.User.Id,
+                    Username = authResponse.User.Username
+                };
+                await SaveCurrentUserAsync(CurrentUser);
+                Console.WriteLine($"User logged in: ID={CurrentUser.Id}, Username={CurrentUser.Username}");
+                OnAuthStateChanged?.Invoke();
+                return true;
+            }
+
+            Console.WriteLine($"Login failed: {authResponse?.Message}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Login error: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task LogoutAsync()
@@ -74,26 +116,27 @@ public class AuthService
         if (CurrentUser == null)
             return false;
 
-        var users = await GetUsersAsync();
-        users.RemoveAll(u => u.Username.Equals(CurrentUser.Username, StringComparison.OrdinalIgnoreCase));
-        await SaveUsersAsync(users);
-        
-        await LogoutAsync();
-        return true;
+        try
+        {
+            var response = await _http.DeleteAsync($"{ApiUrl}/auth/user/{CurrentUser.Username}");
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+
+            if (authResponse?.Success == true)
+            {
+                await LogoutAsync();
+                return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Delete user error: {ex.Message}");
+            return false;
+        }
     }
 
     public bool IsAuthenticated() => CurrentUser != null;
-
-    private async Task<List<User>> GetUsersAsync()
-    {
-        var users = await _localStorage.GetItemAsync<List<User>>(USERS_KEY);
-        return users ?? new List<User>();
-    }
-
-    private async Task SaveUsersAsync(List<User> users)
-    {
-        await _localStorage.SetItemAsync(USERS_KEY, users);
-    }
 
     private async Task LoadCurrentUserAsync()
     {

@@ -1,0 +1,466 @@
+@page "/assistant-dashboard"
+@using BlazorAuthApp.Services
+@using BlazorAuthApp.Models
+@inject AssistantService AssistantService
+@inject AppointmentService AppointmentService
+@inject NavigationManager Navigation
+
+<PageTitle>SoftMax Portal - Dashboard</PageTitle>
+
+@if (currentAssistant != null && loginInfo != null)
+{
+    <div class="assistant-dashboard">
+        <!-- Top Navigation Bar -->
+        <div class="top-navbar">
+            <div class="navbar-brand">
+                <div class="logo">🏥</div>
+                <div class="brand-text">
+                    <h2>SoftMax Portal</h2>
+                    <p>Assistant Dashboard</p>
+                </div>
+            </div>
+            <div class="navbar-user">
+                <div class="user-info">
+                    <div class="user-avatar">@currentAssistant.FullName.Substring(0, 1).ToUpper()</div>
+                    <div class="user-details">
+                        <div class="user-name">@currentAssistant.FullName</div>
+                        <div class="user-role">Assistant</div>
+                    </div>
+                </div>
+                <button class="btn-logout" @onclick="HandleLogout">
+                    <span>🚪</span> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Assistant Profile Card -->
+        <div class="profile-section">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar"> <br/>
+                        <div class="avatar-circle">@currentAssistant.FullName.Substring(0, 2).ToUpper()</div>
+                        <div class="online-indicator"></div>
+                    </div>
+                    <div class="profile-info">
+                        <h3>@currentAssistant.FullName</h3>
+                        <p class="subtitle">SoftMax Assistant</p>
+                        <div class="profile-badges">
+                            <span class="badge badge-active">● Active</span>
+                            <span class="badge badge-verified">✓ Verified</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-details">
+                    <div class="detail-row">
+                        <div class="detail-icon">👤</div>
+                        <div class="detail-content">
+                            <div class="detail-label">Username</div>
+                            <div class="detail-value">@currentAssistant.Username</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon"></div>
+                        <div class="detail-content">
+                            <div class="detail-label">Email</div>
+                            <div class="detail-value">@currentAssistant.Email</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon"></div>
+                        <div class="detail-content">
+                            <div class="detail-label">Phone</div>
+                            <div class="detail-value">@currentAssistant.PhoneNumber</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon">🏷️</div>
+                        <div class="detail-content">
+                            <div class="detail-label">ETag Barcode</div>
+                            <div class="detail-value barcode">@currentAssistant.ETagBarcode</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon">⏰</div>
+                        <div class="detail-content">
+                            <div class="detail-label">Login Time</div>
+                            <div class="detail-value">@loginInfo.LoginTime.ToString("MMM dd, yyyy HH:mm:ss")</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon">⌚</div>
+                        <div class="detail-content">
+                            <div class="detail-label">Session Duration</div>
+                            <div class="detail-value text-success">@loginInfo.SessionDuration</div>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-icon">📅</div>
+                        <div class="detail-content">
+                            <div class="detail-label">Member Since</div>
+                            <div class="detail-value">@currentAssistant.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-@(messageType ?? "info")">
+                    <span class="alert-icon">@(messageType == "success" ? "✓" : messageType == "danger" ? "❌" : "ℹ️")</span>
+                    <span>@message</span>
+                </div>
+            }
+
+            @if (isLoading)
+            {
+                <div class="loading-overlay">
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                        <p>Loading appointments...</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+            <!-- Statistics Cards -->
+            <div class="stats-container">
+                <div class="stat-card stat-total">
+                    <div class="stat-header">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-trend">+12%</div>
+                    </div>
+                    <div class="stat-body">
+                        <h3 class="stat-number">@totalAppointments</h3>
+                        <p class="stat-label">Total Today</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-pending">
+                    <div class="stat-header">
+                        <div class="stat-icon">⏰</div>
+                        <div class="stat-trend">@pendingAppointments pending</div>
+                    </div>
+                    <div class="stat-body">
+                        <h3 class="stat-number">@pendingAppointments</h3>
+                        <p class="stat-label">Awaiting Check-in</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-confirmed">
+                    <div class="stat-header">
+                        <div class="stat-icon">✓</div>
+                        <div class="stat-trend">@confirmedAppointments active</div>
+                    </div>
+                    <div class="stat-body">
+                        <h3 class="stat-number">@confirmedAppointments</h3>
+                        <p class="stat-label">Confirmed</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-completed">
+                    <div class="stat-header">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-trend">
+                            @if (totalAppointments > 0)
+                            {
+                                <span>@((completedAppointments * 100 / totalAppointments))% done</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="stat-body">
+                        <h3 class="stat-number">@completedAppointments</h3>
+                        <p class="stat-label">Completed</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-cancelled">
+                    <div class="stat-header">
+                        <div class="stat-icon">Cancelled</div>
+                        <div class="stat-trend">@cancelledAppointments cancelled</div>
+                    </div>
+                    <div class="stat-body">
+                        <h3 class="stat-number">@cancelledAppointments</h3>
+                        <p class="stat-label">Cancelled</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Check-in Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3>🔍 Patient Search & Check-in</h3>
+                    <p>Search by patient name or appointment ID</p>
+                </div>
+                <div class="search-container">
+                    <div class="search-box">
+                        <span class="search-icon">🔎</span>
+                        <input type="text" @bind="searchQuery" @oninput="HandleSearch" 
+                               class="search-input" placeholder="Type patient name, doctor, or appointment ID..." />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appointments Table -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3>📋 Appointment Management</h3>
+                    <p>@filteredAppointments.Count() appointment(s) @(string.IsNullOrWhiteSpace(searchQuery) ? "today" : "found")</p>
+                </div>
+                @if (filteredAppointments.Any())
+                {
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var apt in filteredAppointments.OrderByDescending(a => a.AppointmentDate))
+                                {
+                                    <tr class="row-@apt.Status.ToLower()">
+                                        <td><span class="id-badge">#@apt.Id</span></td>
+                                        <td>
+                                            <div class="patient-info">
+                                                <div class="patient-avatar">@apt.PatientName.Substring(0, 1).ToUpper()</div>
+                                                <div>
+                                                    <div class="patient-name">@apt.PatientName</div>
+                                                    <div class="patient-contact">@apt.PatientEmail</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="doctor-info">
+                                                <strong>Dr. @(apt.Doctor?.FullName ?? "N/A")</strong>
+                                                <div class="doctor-spec">@(apt.Doctor?.Specialization ?? "")</div>
+                                            </div>
+                                        </td>
+                                        <td>@apt.AppointmentDate.ToString("MMM dd, yyyy")</td>
+                                        <td><span class="time-badge">@apt.TimeSlot</span></td>
+                                        <td>
+                                            @if (apt.Status == "Cancelled")
+                                            {
+                                                <span class="status-badge status-cancelled" style=color: #dc2626 !important; font-weight: 800 !important;">
+                                                    <span class="cancel-circle">✗</span>
+                                                </span>
+                                                <div class="cancelled-info">
+                                                    <small style="color: #dc2626 !important; font-weight: 700 !important; background: none !important;">by patient</small>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-badge status-@apt.Status.ToLower()">
+                                                    @if (apt.Status == "Pending")
+                                                    {
+                                                        <span>⏳</span>
+                                                    }
+                                                    else if (apt.Status == "Confirmed")
+                                                    {
+                                                        <span>✓</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="check-circle">✓</span>
+                                                    }
+                                                    @apt.Status
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                @if (apt.Status == "Pending")
+                                                {
+                                                    <button class="btn-action btn-checkin" @onclick="() => ConfirmAppointment(apt.Id)">
+                                                        <span>✓</span> Check-in
+                                                    </button>
+                                                }
+                                                else if (apt.Status == "Confirmed")
+                                                {
+                                                    <button class="btn-action btn-complete" @onclick="() => CompleteAppointment(apt.Id)">
+                                                        <span>✓</span> Complete
+                                                    </button>
+                                                }
+                                                else if (apt.Status == "Cancelled")
+                                                {
+                                                    <span class="text-cancelled" style="color: #dc2626 !important; font-weight: 800 !important;"><span class="cancel-circle">✗</span> <span style="color: #dc2626 !important;">Cancelled</span></span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-completed"><span class="check-circle">✓</span> Finished</span>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <h4>No Appointments Found</h4>
+                        <p>@(string.IsNullOrWhiteSpace(searchQuery) ? "No appointments scheduled for today." : $"No results found for '{searchQuery}'")</p>
+                    </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="login-required">
+        <div class="login-message">
+            <h3>Authentication Required</h3>
+            <p>Please log in to access the assistant dashboard.</p>
+            <a href="/assistant-login" class="btn-primary">Assistant Login</a>
+        </div>
+    </div>
+}
+
+@code {
+    private Assistant? currentAssistant;
+    private AssistantLoginInfo? loginInfo;
+    private string message = "";
+    private string? messageType;
+    private bool isLoading = true;
+    private List<Appointment> appointments = new();
+    private List<Appointment> filteredAppointments = new();
+    private string searchQuery = "";
+    
+    private int totalAppointments = 0;
+    private int pendingAppointments = 0;
+    private int confirmedAppointments = 0;
+    private int completedAppointments = 0;
+    private int cancelledAppointments = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("[AssistantDashboard] OnInitializedAsync started");
+        
+        currentAssistant = await AssistantService.GetCurrentAssistantAsync();
+        loginInfo = await AssistantService.GetLoginInfoAsync();
+        
+        Console.WriteLine($"[AssistantDashboard] Current assistant: {currentAssistant?.Username ?? "null"}");
+        Console.WriteLine($"[AssistantDashboard] Login info: {loginInfo?.Assistant?.Username ?? "null"}");
+        
+        if (currentAssistant == null)
+        {
+            Console.WriteLine("[AssistantDashboard] No assistant found, redirecting to login");
+            Navigation.NavigateTo("/assistant-login", forceLoad: true);
+            return;
+        }
+
+        Console.WriteLine("[AssistantDashboard] Loading appointments...");
+        await LoadAppointments();
+    }
+
+    private async Task LoadAppointments()
+    {
+        isLoading = true;
+        
+        try
+        {
+            // Load all appointments (not filtered by user)
+            appointments = await AppointmentService.GetAllAppointmentsAsync();
+            filteredAppointments = appointments;
+
+            // Calculate statistics for today
+            var today = DateTime.Today;
+            var todayAppointments = appointments.Where(a => a.AppointmentDate.Date == today).ToList();
+            
+            totalAppointments = todayAppointments.Count;
+            pendingAppointments = todayAppointments.Count(a => a.Status == "Pending");
+            confirmedAppointments = todayAppointments.Count(a => a.Status == "Confirmed");
+            cancelledAppointments = todayAppointments.Count(a => a.Status == "Cancelled");
+            completedAppointments = todayAppointments.Count(a => a.Status == "Completed");
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading appointments: {ex.Message}";
+            messageType = "danger";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredAppointments = appointments;
+            return;
+        }
+
+        var query = searchQuery.ToLower();
+        filteredAppointments = appointments.Where(a =>
+            a.PatientName.ToLower().Contains(query) ||
+            (a.Doctor?.FullName?.ToLower().Contains(query) ?? false) ||
+            a.Id.ToString().Contains(query)
+        ).ToList();
+    }
+
+    private async Task ConfirmAppointment(int appointmentId)
+    {
+        try
+        {
+            var (success, msg) = await AppointmentService.UpdateAppointmentStatusAsync(appointmentId, "Confirmed");
+            if (success)
+            {
+                message = "✅ Patient checked in successfully!";
+                messageType = "success";
+                await LoadAppointments();
+            }
+            else
+            {
+                message = $"Error: {msg}";
+                messageType = "danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+            messageType = "danger";
+        }
+    }
+
+    private async Task CompleteAppointment(int appointmentId)
+    {
+        try
+        {
+            var (success, msg) = await AppointmentService.UpdateAppointmentStatusAsync(appointmentId, "Completed");
+            if (success)
+            {
+                message = "✅ Appointment marked as completed!";
+                messageType = "success";
+                await LoadAppointments();
+            }
+            else
+            {
+                message = $"Error: {msg}";
+                messageType = "danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+            messageType = "danger";
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await AssistantService.LogoutAsync();
+        Navigation.NavigateTo("/assistant-login");
+    }
+}

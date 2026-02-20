@@ -7,13 +7,19 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Configure HttpClient for API calls - don't use BaseAddress so services can specify full URLs
-builder.Services.AddScoped(sp => new HttpClient());
+// Load API URL from configuration
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5230/api";
+Console.WriteLine($"API Base URL: {apiBaseUrl}");
+
+// Configure HttpClient for API calls with BaseAddress
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddSingleton(new ApiConfiguration { BaseUrl = apiBaseUrl });
 
 builder.Services.AddScoped<LocalStorageService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DoctorService>();
 builder.Services.AddScoped<AppointmentService>();
+builder.Services.AddScoped<AssistantService>();
 
 var host = builder.Build();
 

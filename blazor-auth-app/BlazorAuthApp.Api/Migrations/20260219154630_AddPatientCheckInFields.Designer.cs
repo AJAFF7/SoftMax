@@ -3,6 +3,7 @@ using System;
 using BlazorAuthApp.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BlazorAuthApp.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260219154630_AddPatientCheckInFields")]
+    partial class AddPatientCheckInFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,9 +35,6 @@ namespace BlazorAuthApp.Api.Migrations
 
                     b.Property<DateTime>("AppointmentDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CheckedInByAssistantId")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -94,8 +94,6 @@ namespace BlazorAuthApp.Api.Migrations
 
                     b.HasIndex("AppointmentDate");
 
-                    b.HasIndex("CheckedInByAssistantId");
-
                     b.HasIndex("DoctorId");
 
                     b.HasIndex("Status");
@@ -103,64 +101,6 @@ namespace BlazorAuthApp.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Appointments");
-                });
-
-            modelBuilder.Entity("BlazorAuthApp.Api.Models.Assistant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ETagBarcode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ETagBarcode")
-                        .IsUnique();
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("Username")
-                        .IsUnique();
-
-                    b.ToTable("Assistants");
                 });
 
             modelBuilder.Entity("BlazorAuthApp.Api.Models.Doctor", b =>
@@ -348,11 +288,6 @@ namespace BlazorAuthApp.Api.Migrations
 
             modelBuilder.Entity("BlazorAuthApp.Api.Models.Appointment", b =>
                 {
-                    b.HasOne("BlazorAuthApp.Api.Models.Assistant", "CheckedInByAssistant")
-                        .WithMany("CheckedInAppointments")
-                        .HasForeignKey("CheckedInByAssistantId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("BlazorAuthApp.Api.Models.Doctor", "Doctor")
                         .WithMany("Appointments")
                         .HasForeignKey("DoctorId")
@@ -365,16 +300,9 @@ namespace BlazorAuthApp.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("CheckedInByAssistant");
-
                     b.Navigation("Doctor");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BlazorAuthApp.Api.Models.Assistant", b =>
-                {
-                    b.Navigation("CheckedInAppointments");
                 });
 
             modelBuilder.Entity("BlazorAuthApp.Api.Models.Doctor", b =>

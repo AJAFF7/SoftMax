@@ -39,6 +39,16 @@ public class Appointment
     [MaxLength(50)]
     public string Status { get; set; } = "Pending"; // Pending, Confirmed, Completed, Cancelled
     
+    public bool PatientArrived { get; set; } = false;
+    
+    public DateTime? PatientArrivedAt { get; set; }
+    
+    public bool IsFinished { get; set; } = false;
+    
+    public DateTime? FinishedAt { get; set; }
+    
+    public int? CheckedInByAssistantId { get; set; }
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     public DateTime? UpdatedAt { get; set; }
@@ -49,4 +59,7 @@ public class Appointment
     
     [ForeignKey("DoctorId")]
     public Doctor Doctor { get; set; } = null!;
+    
+    [ForeignKey("CheckedInByAssistantId")]
+    public Assistant? CheckedInByAssistant { get; set; }
 }

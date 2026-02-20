@@ -1,6 +1,9 @@
 @page "/dashboard"
 @using BlazorAuthApp.Services
+@using BlazorAuthApp.Models
 @inject AuthService AuthService
+@inject AppointmentService AppointmentService
+@inject DoctorService DoctorService
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -12,7 +15,7 @@
         <div class="dashboard-header">
             <div class="dashboard-title">
                 <h1>Welcome, @AuthService.CurrentUser?.Username!</h1>
-                <p>You are successfully logged in.</p>
+                <p>Your healthcare dashboard</p>
             </div>
         </div>
 
@@ -21,14 +24,124 @@
             <div class="alert alert-info mt-4">@message</div>
         }
 
-        <div class="dashboard-content mt-5">
-            <div class="card">
-                <div class="card-body">
-                    <h3>Dashboard Overview</h3>
-                    <p class="text-muted">Your personalized dashboard content goes here.</p>
+        @if (isLoading)
+        {
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading your data...</p>
+            </div>
+        }
+        else
+        {
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-content">
+                        <h3>@totalAppointments</h3>
+                        <p>Total Appointments</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏰</div>
+                    <div class="stat-content">
+                        <h3>@upcomingAppointments</h3>
+                        <p>Upcoming</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <h3>@completedAppointments</h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🩺</div>
+                    <div class="stat-content">
+                        <h3>@totalDoctors</h3>
+                        <p>Available Doctors</p>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Appointments by Doctor Chart -->
+            @if (appointments.Any())
+            {
+                <div class="dashboard-section">
+                    <h3>Appointments by Doctor</h3>
+                    <div class="chart-container">
+                        @foreach (var group in appointmentsByDoctor.OrderByDescending(x => x.Count))
+                        {
+                            var percentage = totalAppointments > 0 ? (group.Count * 100.0 / totalAppointments) : 0;
+                            <div class="chart-row">
+                                <div class="chart-label">@group.DoctorName</div>
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar" style="width: @percentage%">
+                                        <span class="chart-value">@group.Count</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Status Distribution -->
+                <div class="dashboard-section">
+                    <h3>Appointment Status</h3>
+                    <div class="status-grid">
+                        @foreach (var status in appointmentsByStatus)
+                        {
+                            var statusClass = status.Status.ToLower();
+                            <div class="status-card @statusClass">
+                                <div class="status-count">@status.Count</div>
+                                <div class="status-label">@status.Status</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Recent Appointments -->
+                <div class="dashboard-section">
+                    <h3>Recent Appointments</h3>
+                    <div class="appointments-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Doctor</th>
+                                    <th>Specialization</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var apt in appointments.OrderByDescending(a => a.AppointmentDate).Take(5))
+                                {
+                                    <tr>
+                                        <td>@apt.AppointmentDate.ToString("MMM dd, yyyy")</td>
+                                        <td>@apt.TimeSlot</td>
+                                        <td>Dr. @apt.Doctor.FullName</td>
+                                        <td>@apt.Doctor.Specialization</td>
+                                        <td><span class="badge badge-@apt.Status.ToLower()">@apt.Status</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="dashboard-section">
+                    <div class="empty-state">
+                        <h3>No Appointments Yet</h3>
+                        <p>Start by booking an appointment with one of our doctors</p>
+                        <a href="/doctors" class="btn btn-primary">Browse Doctors</a>
+                    </div>
+                </div>
+            }
+        }
     </div>
 }
 else
@@ -52,6 +165,29 @@ else
 
 @code {
     private string message = "";
+    private bool isLoading = true;
+    private List<Appointment> appointments = new();
+    private List<Doctor> doctors = new();
+    
+    private int totalAppointments = 0;
+    private int upcomingAppointments = 0;
+    private int completedAppointments = 0;
+    private int totalDoctors = 0;
+
+    private class DoctorAppointmentGroup
+    {
+        public string DoctorName { get; set; } = "";
+        public int Count { get; set; }
+    }
+
+    private class StatusGroup
+    {
+        public string Status { get; set; } = "";
+        public int Count { get; set; }
+    }
+
+    private List<DoctorAppointmentGroup> appointmentsByDoctor = new();
+    private List<StatusGroup> appointmentsByStatus = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,35 +197,67 @@ else
         if (!AuthService.IsAuthenticated())
         {
             Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        
+        try
+        {
+            // Load appointments and doctors
+            appointments = await AppointmentService.GetUserAppointmentsAsync();
+            doctors = await DoctorService.GetDoctorsAsync();
+
+            // Calculate statistics
+            totalAppointments = appointments.Count;
+            totalDoctors = doctors.Count;
+            
+            var today = DateTime.Today;
+            upcomingAppointments = appointments.Count(a => 
+                a.AppointmentDate >= today && 
+                (a.Status == "Pending" || a.Status == "Confirmed"));
+            
+            completedAppointments = appointments.Count(a => a.Status == "Completed");
+
+            // Group by doctor
+            appointmentsByDoctor = appointments
+                .GroupBy(a => a.Doctor.FullName)
+                .Select(g => new DoctorAppointmentGroup
+                {
+                    DoctorName = "Dr. " + g.Key,
+                    Count = g.Count()
+                })
+                .ToList();
+
+            // Group by status
+            appointmentsByStatus = appointments
+                .GroupBy(a => a.Status)
+                .Select(g => new StatusGroup
+                {
+                    Status = g.Key,
+                    Count = g.Count()
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            message = $"Error loading dashboard data: {ex.Message}";
+            Console.WriteLine($"Dashboard error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
     private void OnAuthStateChanged()
     {
         StateHasChanged();
-    }
-
-    private async Task HandleLogout()
-    {
-        await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login");
-    }
-
-    private async Task HandleDeleteUser()
-    {
-        var confirmed = await ConfirmDelete();
-        if (confirmed)
-        {
-            await AuthService.DeleteCurrentUserAsync();
-            Navigation.NavigateTo("/register");
-        }
-    }
-
-    private async Task<bool> ConfirmDelete()
-    {
-        // Simple confirmation - in a real app, you'd use a modal
-        message = "User deleted successfully!";
-        return true;
     }
 
     public void Dispose()

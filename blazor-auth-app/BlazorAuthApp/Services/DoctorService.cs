@@ -7,12 +7,13 @@ public class DoctorService
 {
     private readonly HttpClient _http;
     private readonly AuthService _authService;
-    private const string ApiUrl = "http://localhost:5230/api";
+    private readonly string ApiUrl;
 
-    public DoctorService(HttpClient http, AuthService authService)
+    public DoctorService(HttpClient http, AuthService authService, ApiConfiguration config)
     {
         _http = http;
         _authService = authService;
+        ApiUrl = config.BaseUrl;
     }
 
     public async Task<List<Doctor>> GetDoctorsAsync()

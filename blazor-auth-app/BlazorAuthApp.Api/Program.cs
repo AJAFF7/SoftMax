@@ -16,7 +16,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
     {
-        policy.WithOrigins("http://localhost:5210", "https://localhost:7194")
+        policy.WithOrigins(
+                "http://localhost",           // Docker - Blazor on port 80
+                "http://localhost:80",        // Docker - Blazor explicit port
+                "http://localhost:5210",      // Local dev - Blazor
+                "https://localhost:7194")     // Local dev - Blazor HTTPS
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -25,7 +29,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in non-Docker environments
+if (!app.Environment.EnvironmentName.Equals("Docker", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowBlazorClient");
 

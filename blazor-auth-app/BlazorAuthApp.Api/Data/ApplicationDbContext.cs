@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Doctor> Doctors { get; set; }
     public DbSet<Appointment> Appointments { get; set; }
+    public DbSet<Assistant> Assistants { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,8 +41,20 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(a => a.DoctorId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(a => a.CheckedInByAssistant)
+                .WithMany(asst => asst.CheckedInAppointments)
+                .HasForeignKey(a => a.CheckedInByAssistantId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasIndex(e => e.AppointmentDate);
             entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<Assistant>(entity =>
+        {
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.ETagBarcode).IsUnique();
         });
 
         // Seed some doctors

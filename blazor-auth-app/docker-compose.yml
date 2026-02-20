@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: blazor-postgres
+    environment:
+      POSTGRES_USER: blazoruser
+      POSTGRES_PASSWORD: BlazorPass123!
+      POSTGRES_DB: blazorauthdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - blazor-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blazoruser -d blazorauthdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: BlazorAuthApp.Api/Dockerfile
+    container_name: blazor-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - blazor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/doctors"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  blazor-app:
+    build:
+      context: .
+      dockerfile: BlazorAuthApp/Dockerfile
+    container_name: blazor-app
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - blazor-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  blazor-network:
+    driver: bridge
