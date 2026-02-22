@@ -14,7 +14,7 @@
     padding: 4rem 2rem;
     max-width: 1400px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #a7a7a7 0%, #606060 100%);
+    background: linear-gradient(135deg, #333 0%, #555 100%) !important;
     color: rgb(47, 37, 37);
     border-radius: 0.9rem;
     margin-top: 5rem;
@@ -58,7 +58,7 @@
 
 .btn-hero-primary {
     background: white;
-    color: #667eea;
+    color: #666;
 }
 
 .btn-hero-primary:hover {
@@ -265,7 +265,7 @@
 .btn-cta {
     padding: 1.125rem 3rem;
     background: linear-gradient(135deg, #748b9a 0%, #edf2f7 100%);
-    color: #4F46E5;
+    color: #333;
     border: none;
     border-radius: 0.75rem;
     font-size: 1.125rem;

@@ -133,6 +133,66 @@ public class ApplicationDbContext : DbContext
                 YearsOfExperience = 18,
                 IsAvailable = true,
                 CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new Doctor
+            {
+                Id = 6,
+                FirstName = "James",
+                LastName = "Williams",
+                Specialization = "Ophthalmology",
+                Description = "Expert eye specialist providing comprehensive eye care and vision solutions.",
+                Email = "james.williams@hospital.com",
+                Phone = "+1-555-0106",
+                ImageUrl = "https://ui-avatars.com/api/?name=James+Williams&background=06B6D4&color=fff&size=200",
+                ConsultationFee = 140.00m,
+                YearsOfExperience = 14,
+                IsAvailable = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new Doctor
+            {
+                Id = 7,
+                FirstName = "Maria",
+                LastName = "Garcia",
+                Specialization = "Psychiatry",
+                Description = "Caring psychiatrist specializing in mental health and emotional well-being.",
+                Email = "maria.garcia@hospital.com",
+                Phone = "+1-555-0107",
+                ImageUrl = "https://ui-avatars.com/api/?name=Maria+Garcia&background=EC4899&color=fff&size=200",
+                ConsultationFee = 145.00m,
+                YearsOfExperience = 11,
+                IsAvailable = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new Doctor
+            {
+                Id = 8,
+                FirstName = "Robert",
+                LastName = "Lee",
+                Specialization = "General Surgery",
+                Description = "Highly skilled surgeon with expertise in various surgical procedures.",
+                Email = "robert.lee@hospital.com",
+                Phone = "+1-555-0108",
+                ImageUrl = "https://ui-avatars.com/api/?name=Robert+Lee&background=14B8A6&color=fff&size=200",
+                ConsultationFee = 170.00m,
+                YearsOfExperience = 16,
+                IsAvailable = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new Doctor
+            {
+                Id = 9,
+                FirstName = "Amanda",
+                LastName = "Miller",
+                Specialization = "Endocrinology",
+                Description = "Dedicated endocrinologist treating hormone disorders and metabolic conditions.",
+                Email = "amanda.miller@hospital.com",
+                Phone = "+1-555-0109",
+                ImageUrl = "https://ui-avatars.com/api/?name=Amanda+Miller&background=F97316&color=fff&size=200",
+                ConsultationFee = 155.00m,
+                YearsOfExperience = 13,
+                IsAvailable = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             }
         );
     }

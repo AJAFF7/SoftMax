@@ -7,11 +7,11 @@
 @inject AuthService AuthService
 @implements IDisposable
 
-<PageTitle>My Appointments</PageTitle>
+<PageTitle></PageTitle>
 
 <div class="appointments-page">
     <div class="page-header">
-        <h1 class="page-title">My Appointments</h1>
+        <h1 class="page-title"></h1>
         <button class="btn-new-appointment" @onclick="GoToDoctors">
             + Book New Appointment
         </button>
@@ -39,17 +39,84 @@
     }
     else
     {
-        <!-- Calendar View -->
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <button class="calendar-nav-btn" @onclick="PreviousMonth">
-                    ◀
-                </button>
-                <h2 class="calendar-title">@currentDate.ToString("MMMM yyyy")</h2>
-                <button class="calendar-nav-btn" @onclick="NextMonth">
-                    ▶
-                </button>
+        <!-- Calendar and Chart Side by Side -->
+        <div class="calendar-chart-wrapper">
+            <!-- Doughnut Chart -->
+            <div class="doughnut-chart-container">
+                <h2 class="chart-title">Appointments by Doctor</h2>
+                <div class="doughnut-wrapper">
+                    <svg class="doughnut-chart" viewBox="0 0 200 200">
+                        @{
+                            var stats = GetDoctorStatistics();
+                            var total = stats.Sum(s => s.Count);
+                            var colors = new[] { "#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#14B8A6", "#F97316" };
+                            double currentAngle = -90;
+                            var radius = 80;
+                            var innerRadius = 50;
+                            var centerX = 100;
+                            var centerY = 100;
+                        }
+                        @for (int i = 0; i < stats.Count; i++)
+                        {
+                            var stat = stats[i];
+                            var percentage = (double)stat.Count / total;
+                            var angle = percentage * 360;
+                            var startAngle = currentAngle;
+                            var endAngle = currentAngle + angle;
+                            
+                            var startX = centerX + radius * Math.Cos(startAngle * Math.PI / 180);
+                            var startY = centerY + radius * Math.Sin(startAngle * Math.PI / 180);
+                            var endX = centerX + radius * Math.Cos(endAngle * Math.PI / 180);
+                            var endY = centerY + radius * Math.Sin(endAngle * Math.PI / 180);
+                            
+                            var innerStartX = centerX + innerRadius * Math.Cos(startAngle * Math.PI / 180);
+                            var innerStartY = centerY + innerRadius * Math.Sin(startAngle * Math.PI / 180);
+                            var innerEndX = centerX + innerRadius * Math.Cos(endAngle * Math.PI / 180);
+                            var innerEndY = centerY + innerRadius * Math.Sin(endAngle * Math.PI / 180);
+                            
+                            var largeArc = angle > 180 ? 1 : 0;
+                            var color = colors[i % colors.Length];
+                            
+                            var path = $"M {startX:F2} {startY:F2} A {radius} {radius} 0 {largeArc} 1 {endX:F2} {endY:F2} L {innerEndX:F2} {innerEndY:F2} A {innerRadius} {innerRadius} 0 {largeArc} 0 {innerStartX:F2} {innerStartY:F2} Z";
+                            
+                            <path d="@path" fill="@color" class="doughnut-segment" />
+                            
+                            currentAngle = endAngle;
+                        }
+                        <circle cx="100" cy="100" r="@innerRadius" fill="rgba(255, 255, 255, 0.1)" />
+                        <text x="100" y="95" text-anchor="middle" fill="white" font-size="20" font-weight="bold">@total</text>
+                        <text x="100" y="110" text-anchor="middle" fill="rgba(255, 255, 255, 0.7)" font-size="12">Total</text>
+                    </svg>
+                    <div class="chart-legend">
+                        @{
+                            var legendStats = GetDoctorStatistics();
+                            var legendColors = new[] { "#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#14B8A6", "#F97316" };
+                        }
+                        @for (int i = 0; i < legendStats.Count; i++)
+                        {
+                            var stat = legendStats[i];
+                            var color = legendColors[i % legendColors.Length];
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: @color;"></span>
+                                <span class="legend-label">Dr. @stat.DoctorName</span>
+                                <span class="legend-value">@stat.Count</span>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
+
+            <!-- Calendar View -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button class="calendar-nav-btn" @onclick="PreviousMonth">
+                        ◀
+                    </button>
+                    <h2 class="calendar-title">@currentDate.ToString("MMMM yyyy")</h2>
+                    <button class="calendar-nav-btn" @onclick="NextMonth">
+                        ▶
+                    </button>
+                </div>
 
             <div class="calendar-grid">
                 <div class="calendar-day-header">Sun</div>
@@ -96,6 +163,7 @@
                 }
             </div>
         </div>
+        </div>
 
         <div class="appointments-tabs">
             <button class="tab @(selectedTab == "all" ? "active" : "")" @onclick="@(() => selectedTab = "all")">
@@ -134,24 +202,24 @@
 
                     <div class="appointment-details">
                         <div class="detail-row">
-                            <span class="detail-icon">📅</span>
+                            <span class="detail-icon"></span>
                             <span class="detail-label">Date:</span>
                             <span class="detail-value">@appointment.AppointmentDate.ToString("MMMM dd, yyyy")</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-icon">🕐</span>
+                            <span class="detail-icon"></span>
                             <span class="detail-label">Time:</span>
                             <span class="detail-value">@appointment.TimeSlot</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-icon">👤</span>
+                            <span class="detail-icon"></span>
                             <span class="detail-label">Patient:</span>
                             <span class="detail-value">@appointment.PatientName</span>
                         </div>
                         @if (!string.IsNullOrEmpty(appointment.Symptoms))
                         {
                             <div class="detail-row symptoms">
-                                <span class="detail-icon">📝</span>
+                                <span class="detail-icon"></span>
                                 <span class="detail-label">Symptoms:</span>
                                 <span class="detail-value">@appointment.Symptoms</span>
                             </div>
@@ -159,7 +227,7 @@
                         @if (appointment.Doctor != null)
                         {
                             <div class="detail-row">
-                                <span class="detail-icon">💰</span>
+                                <span class="detail-icon"></span>
                                 <span class="detail-label">Fee:</span>
                                 <span class="detail-value fee">$@appointment.Doctor.ConsultationFee</span>
                             </div>
@@ -480,5 +548,32 @@
     private void GoToDoctors()
     {
         Navigation.NavigateTo("/doctors");
+    }
+
+    private List<DoctorStatistic> GetDoctorStatistics()
+    {
+        return appointments
+            .Where(a => a.Doctor != null)
+            .GroupBy(a => new { a.Doctor!.Id, a.Doctor.FullName })
+            .Select(g => new DoctorStatistic
+            {
+                DoctorName = g.Key.FullName,
+                Count = g.Count()
+            })
+            .OrderByDescending(s => s.Count)
+            .ToList();
+    }
+
+    private double GetBarWidth(int count)
+    {
+        if (!appointments.Any()) return 0;
+        var maxCount = GetDoctorStatistics().Max(s => s.Count);
+        return maxCount > 0 ? (count * 100.0 / maxCount) : 0;
+    }
+
+    private class DoctorStatistic
+    {
+        public string DoctorName { get; set; } = "";
+        public int Count { get; set; }
     }
 }

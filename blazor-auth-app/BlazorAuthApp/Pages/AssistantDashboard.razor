@@ -1,9 +1,11 @@
 @page "/assistant-dashboard"
 @using BlazorAuthApp.Services
 @using BlazorAuthApp.Models
+@using Microsoft.JSInterop
 @inject AssistantService AssistantService
 @inject AppointmentService AppointmentService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <PageTitle>SoftMax Portal - Dashboard</PageTitle>
 
@@ -101,7 +103,65 @@
                             <div class="detail-value">@currentAssistant.CreatedAt.ToString("MMMM dd, yyyy")</div>
                         </div>
                     </div>
+                    <div class="detail-row">
+                        <div class="detail-icon">👤</div>
+                        <div class="detail-content">
+                            <div class="detail-label">Face Recognition</div>
+                            <div class="detail-value">
+                                @if (hasFaceRegistered)
+                                {
+                                    <span class="text-success">✓ Registered</span>
+                                }
+                                else
+                                {
+                                    <span class="text-warning">⚠️ Not Registered</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                @if (!hasFaceRegistered && !showFaceRegistration)
+                {
+                    <div class="profile-actions">
+                        <button type="button" class="btn-register-face" @onclick="StartFaceRegistration">
+                            <span>📷</span> Register Your Face ID
+                        </button>
+                    </div>
+                }
+
+                @if (showFaceRegistration)
+                {
+                    <div class="face-registration-section">
+                        <div class="face-reg-header">
+                            <h4>📷 Register Your Face</h4>
+                            <p>@faceRegStatusMessage</p>
+                        </div>
+                        <div class="face-reg-video-container">
+                            <video id="face-reg-video" autoplay muted playsinline></video>
+                            @if (isFaceRegReady && !isProcessingFaceReg)
+                            {
+                                <div class="face-overlay"></div>
+                            }
+                        </div>
+                        @if (isFaceRegReady && !isProcessingFaceReg)
+                        {
+                            <button type="button" class="btn-capture-face" @onclick="CaptureFaceForRegistration">
+                                <span>📸</span> Capture & Register
+                            </button>
+                        }
+                        @if (isProcessingFaceReg)
+                        {
+                            <div class="processing-indicator">
+                                <div class="spinner"></div>
+                                <p>Processing...</p>
+                            </div>
+                        }
+                        <button type="button" class="btn-cancel" @onclick="CancelFaceRegistration" disabled="@isProcessingFaceReg">
+                            Cancel
+                        </button>
+                    </div>
+                }
             </div>
         </div>
 
@@ -341,25 +401,59 @@ else
     private int completedAppointments = 0;
     private int cancelledAppointments = 0;
 
+    // Face registration variables
+    private bool hasFaceRegistered = false;
+    private bool showFaceRegistration = false;
+    private bool isFaceRegReady = false;
+    private bool isProcessingFaceReg = false;
+    private string faceRegStatusMessage = "Initializing camera...";
+    private bool shouldStartFaceRegCamera = false;
+
     protected override async Task OnInitializedAsync()
     {
         Console.WriteLine("[AssistantDashboard] OnInitializedAsync started");
+        
+        // Add a small delay to ensure localStorage is ready
+        await Task.Delay(100);
         
         currentAssistant = await AssistantService.GetCurrentAssistantAsync();
         loginInfo = await AssistantService.GetLoginInfoAsync();
         
         Console.WriteLine($"[AssistantDashboard] Current assistant: {currentAssistant?.Username ?? "null"}");
+        Console.WriteLine($"[AssistantDashboard] Current assistant ID: {currentAssistant?.Id ?? 0}");
         Console.WriteLine($"[AssistantDashboard] Login info: {loginInfo?.Assistant?.Username ?? "null"}");
         
         if (currentAssistant == null)
         {
-            Console.WriteLine("[AssistantDashboard] No assistant found, redirecting to login");
-            Navigation.NavigateTo("/assistant-login", forceLoad: true);
+            Console.WriteLine("[AssistantDashboard] No assistant found in localStorage, redirecting to login");
+            Navigation.NavigateTo("/assistant-login");
             return;
         }
 
-        Console.WriteLine("[AssistantDashboard] Loading appointments...");
+        // Face recognition not implemented
+        hasFaceRegistered = false;
+
+        Console.WriteLine($"[AssistantDashboard] Assistant authenticated: {currentAssistant.FullName}, Loading appointments...");
         await LoadAppointments();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (shouldStartFaceRegCamera && showFaceRegistration)
+        {
+            shouldStartFaceRegCamera = false;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("faceRecognition.start", "face-reg-video", DotNetObjectReference.Create(this));
+            }
+            catch (Exception ex)
+            {
+                message = $"Camera error: {ex.Message}";
+                messageType = "danger";
+                showFaceRegistration = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
     }
 
     private async Task LoadAppointments()
@@ -462,5 +556,113 @@ else
     {
         await AssistantService.LogoutAsync();
         Navigation.NavigateTo("/assistant-login");
+    }
+
+    // Face Registration Methods
+    private void StartFaceRegistration()
+    {
+        showFaceRegistration = true;
+        isFaceRegReady = false;
+        faceRegStatusMessage = "Initializing camera...";
+        shouldStartFaceRegCamera = true;
+        StateHasChanged();
+    }
+
+    private async Task CancelFaceRegistration()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("faceRecognition.stop");
+        }
+        catch { }
+        
+        showFaceRegistration = false;
+        isFaceRegReady = false;
+        isProcessingFaceReg = false;
+        faceRegStatusMessage = "Initializing camera...";
+    }
+
+    [JSInvokable]
+    public void OnCameraReady()
+    {
+        isFaceRegReady = true;
+        faceRegStatusMessage = "Camera ready! Position your face in the frame and click 'Capture & Register'";
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnFaceError(string error)
+    {
+        message = error;
+        messageType = "danger";
+        isProcessingFaceReg = false;
+        if (!error.Contains("No face detected") && !error.Contains("Error capturing face"))
+        {
+            await CancelFaceRegistration();
+        }
+        StateHasChanged();
+    }
+
+    private async Task CaptureFaceForRegistration()
+    {
+        if (currentAssistant == null) return;
+
+        isProcessingFaceReg = true;
+        faceRegStatusMessage = "Capturing face...";
+        message = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var faceDescriptor = await JSRuntime.InvokeAsync<string>("faceRecognition.captureFace");
+            
+            if (string.IsNullOrEmpty(faceDescriptor))
+            {
+                isProcessingFaceReg = false;
+                faceRegStatusMessage = "Camera ready! Position your face in the frame and click 'Capture & Register'";
+                StateHasChanged();
+                return;
+            }
+
+            Console.WriteLine($"[AssistantDashboard] Face captured, registering...");
+            faceRegStatusMessage = "Registering face...";
+            StateHasChanged();
+
+            // Face registration not implemented yet
+            bool success = false;
+            string msg = "Face registration feature not implemented";
+
+            if (success)
+            {
+                Console.WriteLine($"[AssistantDashboard] Face registration successful");
+                message = "✅ Face registered successfully! You can now use face recognition to login.";
+                messageType = "success";
+                hasFaceRegistered = true;
+                
+                // Update current assistant
+                currentAssistant = await AssistantService.GetCurrentAssistantAsync();
+                
+                await CancelFaceRegistration();
+            }
+            else
+            {
+                Console.WriteLine($"[AssistantDashboard] Face registration failed: {msg}");
+                message = $"❌ {msg}";
+                messageType = "danger";
+                isProcessingFaceReg = false;
+                faceRegStatusMessage = "Camera ready! Position your face in the frame and click 'Capture & Register'";
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AssistantDashboard] Face registration error: {ex.Message}");
+            message = $"Error: {ex.Message}";
+            messageType = "danger";
+            isProcessingFaceReg = false;
+            faceRegStatusMessage = "Camera ready! Position your face in the frame and click 'Capture & Register'";
+            StateHasChanged();
+        }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using BlazorAuthApp.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BlazorAuthApp.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260222055006_RemoveFaceDescriptor")]
+    partial class RemoveFaceDescriptor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -299,66 +302,6 @@ namespace BlazorAuthApp.Api.Migrations
                             Phone = "+1-555-0105",
                             Specialization = "Neurology",
                             YearsOfExperience = 18
-                        },
-                        new
-                        {
-                            Id = 6,
-                            ConsultationFee = 140.00m,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Expert eye specialist providing comprehensive eye care and vision solutions.",
-                            Email = "james.williams@hospital.com",
-                            FirstName = "James",
-                            ImageUrl = "https://ui-avatars.com/api/?name=James+Williams&background=06B6D4&color=fff&size=200",
-                            IsAvailable = true,
-                            LastName = "Williams",
-                            Phone = "+1-555-0106",
-                            Specialization = "Ophthalmology",
-                            YearsOfExperience = 14
-                        },
-                        new
-                        {
-                            Id = 7,
-                            ConsultationFee = 145.00m,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Caring psychiatrist specializing in mental health and emotional well-being.",
-                            Email = "maria.garcia@hospital.com",
-                            FirstName = "Maria",
-                            ImageUrl = "https://ui-avatars.com/api/?name=Maria+Garcia&background=EC4899&color=fff&size=200",
-                            IsAvailable = true,
-                            LastName = "Garcia",
-                            Phone = "+1-555-0107",
-                            Specialization = "Psychiatry",
-                            YearsOfExperience = 11
-                        },
-                        new
-                        {
-                            Id = 8,
-                            ConsultationFee = 170.00m,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Highly skilled surgeon with expertise in various surgical procedures.",
-                            Email = "robert.lee@hospital.com",
-                            FirstName = "Robert",
-                            ImageUrl = "https://ui-avatars.com/api/?name=Robert+Lee&background=14B8A6&color=fff&size=200",
-                            IsAvailable = true,
-                            LastName = "Lee",
-                            Phone = "+1-555-0108",
-                            Specialization = "General Surgery",
-                            YearsOfExperience = 16
-                        },
-                        new
-                        {
-                            Id = 9,
-                            ConsultationFee = 155.00m,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Dedicated endocrinologist treating hormone disorders and metabolic conditions.",
-                            Email = "amanda.miller@hospital.com",
-                            FirstName = "Amanda",
-                            ImageUrl = "https://ui-avatars.com/api/?name=Amanda+Miller&background=F97316&color=fff&size=200",
-                            IsAvailable = true,
-                            LastName = "Miller",
-                            Phone = "+1-555-0109",
-                            Specialization = "Endocrinology",
-                            YearsOfExperience = 13
                         });
                 });
 

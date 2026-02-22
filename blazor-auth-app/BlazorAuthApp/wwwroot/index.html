@@ -72,6 +72,7 @@
             stream: null,
             isModelsLoaded: false,
             dotnetHelper: null,
+            isDetecting: false,
 
             loadModels: async function () {
                 if (this.isModelsLoaded) return true;
@@ -91,11 +92,14 @@
             },
 
             start: async function (videoElementId, dotnetHelper) {
+                console.log('[DEBUG] faceRecognition.start called with videoElementId:', videoElementId);
                 this.dotnetHelper = dotnetHelper;
                 
                 // Load models first
+                console.log('[DEBUG] Loading face-api models...');
                 const modelsLoaded = await this.loadModels();
                 if (!modelsLoaded) {
+                    console.error('[DEBUG] Failed to load models');
                     dotnetHelper.invokeMethodAsync('OnFaceError', 'Failed to load face recognition models. Please check your internet connection.');
                     return;
                 }
@@ -107,35 +111,71 @@
                         return;
                     }
 
-                    this.video = document.getElementById(videoElementId);
-                    if (!this.video) {
-                        dotnetHelper.invokeMethodAsync('OnFaceError', 'Video element not found.');
+                    // Wait a bit and retry finding video element (for Blazor rendering)
+                    console.log(`Looking for video element: ${videoElementId}`);
+                    let attempts = 0;
+                    let videoElement = null;
+                    
+                    while (attempts < 10 && !videoElement) {
+                        videoElement = document.getElementById(videoElementId);
+                        if (!videoElement) {
+                            console.log(`Waiting for video element (attempt ${attempts + 1}/10)...`);
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                            attempts++;
+                        } else {
+                            console.log(`Video element found on attempt ${attempts + 1}`);
+                        }
+                    }
+                    
+                    if (!videoElement) {
+                        console.error(`Video element '${videoElementId}' not found after 10 attempts`);
+                        dotnetHelper.invokeMethodAsync('OnFaceError', 'Video element not found. Please try again.');
                         return;
                     }
 
-                    console.log('Requesting camera access...');
-                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                    this.video = videoElement;
+                    console.log('Video element found, requesting camera access...');
+
+                    // Add timeout for camera access
+                    const cameraPromise = navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             facingMode: 'user',
                             width: { ideal: 640 },
                             height: { ideal: 480 }
                         } 
                     });
+
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Camera access timeout - no response from browser after 10 seconds')), 10000)
+                    );
+
+                    this.stream = await Promise.race([cameraPromise, timeoutPromise]);
+                    console.log('Camera stream obtained');
                     
                     this.video.srcObject = this.stream;
+                    console.log('Video srcObject set, starting video play...');
                     await this.video.play();
+                    console.log('Video playing...');
 
                     // Wait for video to be ready
                     await new Promise((resolve) => {
                         this.video.onloadedmetadata = () => {
+                            console.log('Video metadata loaded');
                             resolve();
                         };
                     });
 
                     console.log('Face recognition camera started');
+                    console.log('[DEBUG] Calling dotnetHelper.invokeMethodAsync(OnCameraReady)');
                     dotnetHelper.invokeMethodAsync('OnCameraReady');
+                    
+                    // Start automatic face detection
+                    console.log('Starting automatic detection...');
+                    this.startAutoDetection();
                 } catch (error) {
                     console.error('Camera access error:', error);
+                    console.error('Error name:', error.name);
+                    console.error('Error message:', error.message);
                     let errorMessage = 'Camera access error.';
                     
                     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -154,6 +194,46 @@
                     
                     dotnetHelper.invokeMethodAsync('OnFaceError', errorMessage);
                 }
+            },
+
+            startAutoDetection: async function () {
+                console.log('Starting automatic face detection...');
+                this.isDetecting = true;
+                
+                const detectLoop = async () => {
+                    if (!this.isDetecting || !this.video) {
+                        return;
+                    }
+
+                    try {
+                        // Detect face
+                        const detection = await faceapi
+                            .detectSingleFace(this.video, new faceapi.TinyFaceDetectorOptions())
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+
+                        if (detection) {
+                            console.log('Face detected, sending for verification...');
+                            const descriptor = Array.from(detection.descriptor);
+                            const descriptorJson = JSON.stringify(descriptor);
+                            
+                            // Stop detection while processing
+                            this.isDetecting = false;
+                            
+                            // Send to backend for comparison
+                            this.dotnetHelper.invokeMethodAsync('OnFaceDetected', descriptorJson);
+                        } else {
+                            // No face detected, try again
+                            setTimeout(detectLoop, 500);
+                        }
+                    } catch (error) {
+                        console.error('Auto-detection error:', error);
+                        setTimeout(detectLoop, 1000);
+                    }
+                };
+
+                // Start the detection loop
+                detectLoop();
             },
 
             captureFace: async function () {
@@ -184,6 +264,7 @@
             },
 
             stop: function () {
+                this.isDetecting = false;
                 if (this.stream) {
                     this.stream.getTracks().forEach(track => track.stop());
                     this.stream = null;

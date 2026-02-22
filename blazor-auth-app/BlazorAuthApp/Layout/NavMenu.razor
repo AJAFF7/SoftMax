@@ -19,24 +19,30 @@
         </button>
 
         <div class="navbar-menu @(collapseNavMenu ? "collapsed" : "")">
-            <div class="nav-links">
-                <NavLink href="/" Match="NavLinkMatch.All" class="nav-link-btn">
-                    Home
-                </NavLink>
-
-                <NavLink href="/doctors" class="nav-link-btn">
-                    Find Doctors
-                </NavLink>
-
-                @if (AuthService.IsAuthenticated())
-                {
-                    <NavLink href="/my-appointments" class="nav-link-btn">
-                        My Appointments
+            <div class="nav-links-container">
+                <div class="nav-links">
+                    <NavLink href="/" Match="NavLinkMatch.All" class="nav-link-btn">
+                        <span class="nav-icon"></span>
+                        <span>Home</span>
                     </NavLink>
-                    <NavLink href="/dashboard" class="nav-link-btn">
-                        Dashboard
+
+                    <NavLink href="/doctors" class="nav-link-btn">
+                        <span class="nav-icon"></span>
+                        <span>Find Doctors</span>
                     </NavLink>
-                }
+
+                    @if (AuthService.IsAuthenticated())
+                    {
+                        <NavLink href="/my-appointments" class="nav-link-btn">
+                            <span class="nav-icon"></span>
+                            <span>My Appointments</span>
+                        </NavLink>
+                        <NavLink href="/dashboard" class="nav-link-btn">
+                            <span class="nav-icon"></span>
+                            <span>Dashboard</span>
+                        </NavLink>
+                    }
+                </div>
             </div>
 
             <div class="nav-actions">

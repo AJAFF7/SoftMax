@@ -5,11 +5,10 @@
 
 <PageTitle>Register</PageTitle>
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
+<div class="login-container">
+    <div class="login-card">
+        <div class="card">
+                <div class="card-body"> <br />
                     <h3 class="card-title text-center mb-4">Register</h3>
                     
                     @if (!string.IsNullOrEmpty(errorMessage))
@@ -19,35 +18,38 @@
 
                     <EditForm Model="@this" OnValidSubmit="@HandleRegister">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" @bind="username" />
+                            <label for="username" class="form-label"></label>
+                            <input type="text" class="form-control" id="username" @bind="username" placeholder="Username" />
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" @bind="password" />
+                            <label for="password" class="form-label"></label>
+                            <input type="password" class="form-control" id="password" @bind="password" placeholder="Password" />
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Register</button>
+                        <div class="text-center"><br />
+                           <button type="submit" class="bg-[#777] text-white py-2 px-4 rounded hover:bg-[#333] focus:outline-none focus:ring-2 focus:ring-[#777] login-button">Register</button> 
+ 
+
+                        </div>
                     </EditForm>
 
                     <div class="text-center mt-3">
                         <a href="/login">Already have an account? Login</a>
                         <br />
-                        <a href="/assistant-register" class="mt-2 d-inline-block text-muted">🏥 Register as Assistant</a>
+                       <a href="/assistant-register" class="mt-2 d-inline-block text-primary">🏥 Register as Assistant</a>
                     </div>
 
                     <div class="mt-4">
                         <hr />
-                        @* <h5 class="text-center mb-3">Quick Links</h5>
+                        <h5 class="text-center mb-3"></h5>
                         <div class="d-flex gap-2 justify-content-center">
-                            <a href="/counter" class="btn btn-outline-primary">Counter</a>
-                            <a href="/weather" class="btn btn-outline-info">Weather</a>
-                        </div> *@
+                            @* <a href="/counter" class="btn btn-outline-primary">Counter</a>
+                            <a href="/weather" class="btn btn-outline-info">Weather</a> *@
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
 @code {
     private string username = "";

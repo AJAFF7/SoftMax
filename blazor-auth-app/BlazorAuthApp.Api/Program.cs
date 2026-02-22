@@ -24,6 +24,14 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
+    
+    // Add policy for face registration tool (allows file:// and null origin)
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();
@@ -35,7 +43,8 @@ if (!app.Environment.EnvironmentName.Equals("Docker", StringComparison.OrdinalIg
     app.UseHttpsRedirection();
 }
 
-app.UseCors("AllowBlazorClient");
+// Use AllowAll CORS policy for development (allows file:// protocol and all origins)
+app.UseCors("AllowAll");
 
 app.UseAuthorization();
 
